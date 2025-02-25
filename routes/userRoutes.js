@@ -1,5 +1,16 @@
 import express from 'express';
-import { createUser, loginUser, logoutUser, getAllUser, getCurrentUserProfile , updateCurrentUserProfile } from '../controllers/userController.js';
+import { createUser,
+         loginUser,
+         logoutUser,
+         getAllUser,
+         getCurrentUserProfile ,
+         updateCurrentUserProfile,
+         deleteUserById,
+         getUserById,
+         UpdateUserById,
+
+         } from '../controllers/userController.js';
+
 import { authenticate, authorizeAdmin } from '../middlewares/authMiddleWare.js';
 
 
@@ -19,7 +30,10 @@ router.route('/profile').get(authenticate, getCurrentUserProfile).put(authentica
 
 //admin access like CRUD for admin
 
-
+router.route('/:id')
+.delete(authenticate, authorizeAdmin, deleteUserById)
+.get(authenticate, authorizeAdmin , getUserById)
+.put(authenticate, authorizeAdmin, UpdateUserById)
 
 
 
