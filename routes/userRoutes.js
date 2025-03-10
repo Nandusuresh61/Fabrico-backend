@@ -1,40 +1,13 @@
 import express from 'express';
-import { createUser,
-         loginUser,
-         logoutUser,
-         getAllUser,
-         getCurrentUserProfile ,
-         updateCurrentUserProfile,
-         deleteUserById,
-         getUserById,
-         UpdateUserById,
+import { createUser, loginUser, logoutUser, getAllUsers, toggleUserStatus } from '../controllers/userController.js';
+import { authenticate, authorizeAdmin } from '../middlewares/authMiddleware.js';
 
-         } from '../controllers/userController.js';
+const router = express.Router();
 
-import { authenticate, authorizeAdmin } from '../middlewares/authMiddleWare.js';
-
-
-
-const router = express.Router()
-
-//create user/ login/logout done 
-router.route('/').post(createUser).get(authenticate, authorizeAdmin,getAllUser);
-router.post('/auth', loginUser)
-router.post('/logout', logoutUser)
-
-
-//user directly  to profile and update  // here we can add profile photo
-router.route('/profile').get(authenticate, getCurrentUserProfile).put(authenticate, updateCurrentUserProfile)
-
-
-
-//admin access like CRUD for admin
-
-router.route('/:id')
-.delete(authenticate, authorizeAdmin, deleteUserById)
-.get(authenticate, authorizeAdmin , getUserById)
-.put(authenticate, authorizeAdmin, UpdateUserById)
-
-
+router.post('/', createUser);
+router.post('/auth', loginUser);
+router.post('/logout', logoutUser);
+router.get('/', authenticate, authorizeAdmin, getAllUsers);
+router.put('/:userId/toggle-status', authenticate, authorizeAdmin, toggleUserStatus);
 
 export default router;
