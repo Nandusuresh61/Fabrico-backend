@@ -12,6 +12,7 @@ router.post('/logout', logoutAdmin);
 // Block & Unblock Option
 router.put('/:userId/toggle-status', authenticate, authorizeAdmin, toggleUserStatus);
 // Search From backend
-router.post('/',authenticate, authorizeAdmin, searchUsers)
+router.get('/users',authenticate, authorizeAdmin, searchUsers)
+      
 
-export default router;
+export default router; 
