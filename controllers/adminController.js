@@ -34,11 +34,39 @@ const logoutAdmin = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'Logged out successfully' });
 });
 
-// Get All Users (Admin)
-const getAllUsers = asyncHandler(async (req, res) => {
-    const users = await User.find({});
-    res.json(users);
+// Get All Users (Admin) with Search, Pagination & Sorting
+const searchUsers = asyncHandler(async (req, res) => {
+    const search = req.query.search || '';
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const sortBy = req.query.sortBy || 'createdAt';
+    const order = req.query.order === 'asc' ? 1 : -1;
+
+    const searchFilter = search
+        ? {
+              $or: [
+                  { username: { $regex: search, $options: 'i' } },
+                  { email: { $regex: search, $options: 'i' } },
+                  { status: { $regex: search, $options: 'i' } },
+              ],
+          }
+        : {};
+ 
+    const totalUsers = await User.countDocuments(searchFilter);
+    const users = await User.find(searchFilter)
+        .sort({ [sortBy]: order })
+        .skip((page - 1) * limit) 
+        .limit(limit); 
+    
+    res.json({
+        users,
+        page,
+        totalPages: Math.ceil(totalUsers / limit),
+        totalUsers,
+    });
 });
+
+
 
 // Block/Unblock User (Admin)
 const toggleUserStatus = asyncHandler(async (req, res) => {
@@ -60,5 +88,5 @@ export {
     loginAdmin,
     logoutAdmin,
     toggleUserStatus,
-    getAllUsers,
+    searchUsers,
 }
