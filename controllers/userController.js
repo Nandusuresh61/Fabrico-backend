@@ -62,25 +62,8 @@ const logoutUser = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'Logged out successfully' });
 });
 
-// Get All Users (Admin)
-const getAllUsers = asyncHandler(async (req, res) => {
-    const users = await User.find({});
-    res.json(users);
-});
-
-// Block/Unblock User (Admin)
-const toggleUserStatus = asyncHandler(async (req, res) => {
-    const { userId } = req.params;
-    const user = await User.findById(userId);
-
-    if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-    }
-
-    user.status = user.status === 'active' ? 'blocked' : 'active';
-    await user.save();
-
-    res.status(200).json({ message: `User ${user.status === 'active' ? 'unblocked' : 'blocked'} successfully.` });
-});
-
-export { createUser, loginUser, logoutUser, getAllUsers, toggleUserStatus };
+export {
+    createUser,
+    loginUser,
+    logoutUser
+}
