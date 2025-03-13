@@ -34,37 +34,12 @@ const logoutAdmin = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'Logged out successfully' });
 });
 
-// Get All Users (Admin) with Search, Pagination & Sorting
-const searchUsers = asyncHandler(async (req, res) => {
-    const search = req.query.search || '';
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
-    const sortBy = req.query.sortBy || 'createdAt';
-    const order = req.query.order === 'asc' ? 1 : -1;
-
-    const searchFilter = search
-        ? {
-              $or: [
-                  { username: { $regex: search, $options: 'i' } },
-                  { email: { $regex: search, $options: 'i' } },
-                  { status: { $regex: search, $options: 'i' } },
-              ],
-          }
-        : {};
- 
-    const totalUsers = await User.countDocuments(searchFilter);
-    const users = await User.find(searchFilter)
-        .sort({ [sortBy]: order })
-        .skip((page - 1) * limit) 
-        .limit(limit); 
-    
-    res.json({
-        users,
-        page,
-        totalPages: Math.ceil(totalUsers / limit),
-        totalUsers,
-    });
+// Get All Users (Admin)
+const getAllUsers = asyncHandler(async (req, res) => {
+    const users = await User.find({}).select('-password'); // Exclude passwords
+    res.status(200).json(users);
 });
+
 
 
 
@@ -84,9 +59,73 @@ const toggleUserStatus = asyncHandler(async (req, res) => {
 });
 
 
+
+
+//admin abilitites
+
+const deleteUserById = asyncHandler(async(req,res)=>{
+    const user = await User.findById(req.params.id)
+
+    if(user){
+        if(user.isAdmin){
+            res.status(400)
+            throw new Error('cannot delete admin user')
+        }
+        await User.deleteOne({_id: user._id})
+        res.json({message: "User removed"})
+    }else{
+        res.status(404)
+        throw new Error("User not found")
+    }
+})
+
+const getUserById = asyncHandler(async(req,res)=>{
+    const user = await User.findById(req.params.id).select('-password')
+
+    if(user){
+        res.json(user)
+    }else{
+        res.status(404)
+        throw new Error('User not found')
+    }
+})
+
+const updateUserById = asyncHandler(async(req,res)=>{
+    const user = await User.findById(req.params.id);
+    if(user){
+    user.username = req.body.username || user.username;
+    user.email = req.body.email || user.email;
+    user.isAdmin = Boolean(req.body.isAdmin);
+
+    const updatedUser = await user.save();
+
+    res.json({
+        _id: updatedUser._id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        isAdmin: updatedUser.isAdmin
+    })
+    }else{
+        res.status(404)
+        throw new Error('User not found')
+    }
+    
+})
+
+
+
+
+
+
+
+
 export {
     loginAdmin,
     logoutAdmin,
     toggleUserStatus,
-    searchUsers,
+    getAllUsers,
+    deleteUserById,
+    updateUserById,
+    getUserById,
+
 }
