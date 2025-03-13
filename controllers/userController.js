@@ -62,6 +62,10 @@ const logoutUser = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'Logged out successfully' });
 });
 
+
+
+
+
 export {
     createUser,
     loginUser,
