@@ -45,8 +45,8 @@ const getAllUsers = asyncHandler(async (req, res) => {
 
 // Block/Unblock User (Admin)
 const toggleUserStatus = asyncHandler(async (req, res) => {
-    const { userId } = req.params;
-    const user = await User.findById(userId);
+    const { id } = req.params;
+    const user = await User.findById(id);
 
     if (!user) {
         return res.status(404).json({ message: 'User not found' });
@@ -55,7 +55,7 @@ const toggleUserStatus = asyncHandler(async (req, res) => {
     user.status = user.status === 'active' ? 'blocked' : 'active';
     await user.save();
 
-    res.status(200).json({ message: `User ${user.status === 'active' ? 'unblocked' : 'blocked'} successfully.` });
+    res.status(200).json({ message: `User ${user.status === 'active' ? 'unblocked' : 'blocked'} successfully.`,status: user.status });
 });
 
 
