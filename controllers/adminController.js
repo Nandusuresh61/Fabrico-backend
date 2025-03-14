@@ -36,7 +36,7 @@ const logoutAdmin = asyncHandler(async (req, res) => {
 
 // Get All Users (Admin)
 const getAllUsers = asyncHandler(async (req, res) => {
-    const users = await User.find({}).select('-password'); // Exclude passwords
+    const users = await User.find({}).select('-password'); 
     res.status(200).json(users);
 });
 

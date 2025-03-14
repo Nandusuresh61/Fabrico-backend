@@ -53,40 +53,47 @@ const createUser = asyncHandler(async (req, res) => {
 
 // Send OTP via email
 const sendOtpEmail = async (email, otp) => {
-    // Create reusable transporter
-    const transporter = nodemailer.createTransport({
-        service: 'gmail', // Use your preferred email service
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASSWORD
-        }
-    });
+    try {
+        // Create reusable transporter
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_APP_PASSWORD // Use app password instead of regular password
+            }
+        });
 
-    // Email content
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: 'Your Verification Code for CapsHaven',
-        html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2>Verify Your Email</h2>
-                <p>Thank you for registering with CapsHaven. Please use the following verification code to complete your registration:</p>
-                <div style="font-size: 32px; font-weight: bold; padding: 20px; text-align: center; letter-spacing: 8px; background-color: #f5f5f5; border-radius: 8px; margin: 20px 0;">
-                    ${otp}
+        // Email content
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Your Verification Code for CapsHaven',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2>Verify Your Email</h2>
+                    <p>Thank you for registering with CapsHaven. Please use the following verification code to complete your registration:</p>
+                    <div style="font-size: 32px; font-weight: bold; padding: 20px; text-align: center; letter-spacing: 8px; background-color: #f5f5f5; border-radius: 8px; margin: 20px 0;">
+                        ${otp}
+                    </div>
+                    <p>This code will expire in 10 minutes.</p>
+                    <p>If you didn't request this code, please ignore this email.</p>
                 </div>
-                <p>This code will expire in 10 minutes.</p>
-                <p>If you didn't request this code, please ignore this email.</p>
-            </div>
-        `
-    };
+            `
+        };
 
-    // Send email
-    await transporter.sendMail(mailOptions);
+        // Send email
+        await transporter.sendMail(mailOptions);
+        console.log("OTP email sent successfully");
+    } catch (error) {
+        console.error("Error sending OTP email:", error);
+        throw new Error("Failed to send verification email");
+    }
 };
 
 // Verify OTP
 const verifyOtp = asyncHandler(async (req, res) => {
     const { email, otp } = req.body;
+    console.log(email, otp)
 
     if (!email || !otp) {
         return res.status(400).json({ message: 'Email and OTP are required.' });
