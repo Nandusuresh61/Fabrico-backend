@@ -2,6 +2,7 @@ import User from '../models/userModel.js';
 import asyncHandler from '../middlewares/asyncHandler.js';
 import generateToken from '../utils/createToken.js';
 import bcrypt from 'bcryptjs';
+import nodemailer from 'nodemailer';
 
 // Create a new user
 const createUser = asyncHandler(async (req, res) => {
@@ -12,33 +13,157 @@ const createUser = asyncHandler(async (req, res) => {
     }
 
     const userExists = await User.findOne({ email });
-    if (userExists) {
+    if (userExists && userExists.isVerified) {
         return res.status(400).json({ message: 'User already exists.' });
     }
+
+    // Generate OTP - 6 digit number
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date();
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10); // OTP valid for 10 minutes
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = new User({ username, email, password: hashedPassword });
+    // Delete previous unverified account if exists
+    if (userExists && !userExists.isVerified) {
+        await User.findByIdAndDelete(userExists._id);
+    }
+
+    // Create new user with OTP details
+    const newUser = new User({
+        username,
+        email,
+        password: hashedPassword,
+        isVerified: false,
+        otp,
+        otpExpiry
+    });
+    
     await newUser.save();
 
-    generateToken(res, newUser._id);
+    // Send OTP via email
+    await sendOtpEmail(email, otp);
 
     res.status(201).json({
-        _id: newUser._id,
-        username: newUser.username,
-        email: newUser.email,
-        isAdmin: newUser.isAdmin,
+        message: 'User registered successfully. Please verify your email.',
+        email: newUser.email
     });
 });
 
-// User Login
+// Send OTP via email
+const sendOtpEmail = async (email, otp) => {
+    // Create reusable transporter
+    const transporter = nodemailer.createTransport({
+        service: 'gmail', // Use your preferred email service
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASSWORD
+        }
+    });
+
+    // Email content
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Your Verification Code for CapsHaven',
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2>Verify Your Email</h2>
+                <p>Thank you for registering with CapsHaven. Please use the following verification code to complete your registration:</p>
+                <div style="font-size: 32px; font-weight: bold; padding: 20px; text-align: center; letter-spacing: 8px; background-color: #f5f5f5; border-radius: 8px; margin: 20px 0;">
+                    ${otp}
+                </div>
+                <p>This code will expire in 10 minutes.</p>
+                <p>If you didn't request this code, please ignore this email.</p>
+            </div>
+        `
+    };
+
+    // Send email
+    await transporter.sendMail(mailOptions);
+};
+
+// Verify OTP
+const verifyOtp = asyncHandler(async (req, res) => {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+        return res.status(400).json({ message: 'Email and OTP are required.' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Check if OTP is correct and not expired
+    if (user.otp !== otp) {
+        return res.status(400).json({ message: 'Invalid OTP.' });
+    }
+
+    if (new Date() > user.otpExpiry) {
+        return res.status(400).json({ message: 'OTP has expired.' });
+    }
+
+    // Verify user and clear OTP fields
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+
+    res.status(200).json({ message: 'Email verified successfully.' });
+});
+
+// Resend OTP
+const resendOtp = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email is required.' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (user.isVerified) {
+        return res.status(400).json({ message: 'Email is already verified.' });
+    }
+
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date();
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10); // OTP valid for 10 minutes
+
+    // Update user with new OTP
+    user.otp = otp;
+    user.otpExpiry = otpExpiry;
+    await user.save();
+
+    // Send new OTP via email
+    await sendOtpEmail(email, otp);
+
+    res.status(200).json({ message: 'OTP resent successfully.' });
+});
+
+// User Login - Updated to check verification status
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
     if (!user) {
         return res.status(401).json({ message: 'Invalid email or password.' });
+    }
+
+    // Check if user is verified
+    if (!user.isVerified) {
+        return res.status(401).json({ 
+            message: 'Email not verified.',
+            needsVerification: true,
+            email: user.email
+        });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -62,12 +187,10 @@ const logoutUser = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'Logged out successfully' });
 });
 
-
-
-
-
 export {
     createUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    verifyOtp,
+    resendOtp
 }
