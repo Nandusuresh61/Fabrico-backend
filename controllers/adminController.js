@@ -4,7 +4,6 @@ import generateToken from '../utils/createToken.js';
 import bcrypt from 'bcryptjs';
 
 
-// User Login
 const loginAdmin = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
@@ -28,13 +27,13 @@ const loginAdmin = asyncHandler(async (req, res) => {
     });
 });
 
-// Logout admin
+
 const logoutAdmin = asyncHandler(async (req, res) => {
     res.cookie('jwt', '', { httpOnly: true, expires: new Date(0) });
     res.status(200).json({ message: 'Logged out successfully' });
 });
 
-// Get All Users (Admin)
+
 const getAllUsers = asyncHandler(async (req, res) => {
     const users = await User.find({}).select('-password'); 
     res.status(200).json(users);
@@ -43,7 +42,6 @@ const getAllUsers = asyncHandler(async (req, res) => {
 
 
 
-// Block/Unblock User (Admin)
 const toggleUserStatus = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const user = await User.findById(id);
@@ -58,10 +56,6 @@ const toggleUserStatus = asyncHandler(async (req, res) => {
     res.status(200).json({ message: `User ${user.status === 'active' ? 'unblocked' : 'blocked'} successfully.`,status: user.status });
 });
 
-
-
-
-//admin abilitites
 
 const deleteUserById = asyncHandler(async(req,res)=>{
     const user = await User.findById(req.params.id)
@@ -111,9 +105,6 @@ const updateUserById = asyncHandler(async(req,res)=>{
     }
     
 })
-
-
-
 
 
 
