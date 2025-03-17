@@ -57,29 +57,7 @@ const deleteCategory = asyncHandler(async(req,res) => {
 
 //  Get All Categories 
 const getAllCategories = asyncHandler(async (req, res) => {
-    const search = req.query.search || '';
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
-    const sortBy = req.query.sortBy || 'createdAt';
-    const order = req.query.order === 'asc' ? 1 : -1;
-
-    const searchFilter = search
-        ? { name: { $regex: search, $options: 'i' } }
-        : {};
-
-    const totalCategories = await Category.countDocuments(searchFilter);
-
-    const categories = await Category.find(searchFilter)
-        .sort({ [sortBy]: order }) 
-        .skip((page - 1) * limit) 
-        .limit(limit); 
-
-    res.status(200).json({
-        categories,
-        currentPage: page,
-        totalPages: Math.ceil(totalCategories / limit),
-        totalCategories,
-    });
+    const categories = await Category.find({}); 
+    res.status(200).json(categories);
 });
-
 export { addCategory, editCategory, deleteCategory, getAllCategories };
