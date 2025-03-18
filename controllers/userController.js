@@ -67,11 +67,11 @@ const sendOtpEmail = async (email, otp) => {
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
-            subject: 'Your Verification Code for CapsHaven',
+            subject: 'Your Verification Code for FABRICO',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2>Verify Your Email</h2>
-                    <p>Thank you for registering with CapsHaven. Please use the following verification code to complete your registration:</p>
+                    <p>Thank you for registering with FABRICO. Please use the following verification code to complete your registration:</p>
                     <div style="font-size: 32px; font-weight: bold; padding: 20px; text-align: center; letter-spacing: 8px; background-color: #f5f5f5; border-radius: 8px; margin: 20px 0;">
                         ${otp}
                     </div>
