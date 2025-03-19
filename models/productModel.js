@@ -14,13 +14,19 @@ const productSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
+    discount: {
+        type: Number,
+        required: true,
+    },
     category: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',
         required: true
     },
     brand: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Brand',
+        required: true
     },
     stock: {
         type: Number,
@@ -32,7 +38,7 @@ const productSchema = new mongoose.Schema({
     }],
     status: {
         type: String,
-        enum: ['active', 'inactive'],
+        enum: ['active', 'blocked'],
         default: 'active'
     },
 }, { timestamps: true }
