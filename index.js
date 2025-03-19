@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
+import brandRoutes from './routes/brandRoutes.js';
 dotenv.config();
 import connectDB from './config/db.js';
 
@@ -27,6 +28,7 @@ app.use(cookieParser());
 app.use('/api/users',userRoutes);
 app.use('/api/admin',adminRoutes);
 app.use('/api/categories',categoryRoutes);
+app.use('/api/brands',brandRoutes);
 
 
 
