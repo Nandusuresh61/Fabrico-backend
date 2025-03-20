@@ -1,49 +1,38 @@
-import mongoose, { mongo, Schema } from 'mongoose';
+import mongoose from "mongoose";
 
-const productSchema = new mongoose.Schema({
+const productSchema = new mongoose.Schema(
+  {
     name: {
-        type: String,
-        required: true,
-        trim: true,
-    },  
-    description: {
-        type: String,
-        required: true,
-    },
-    price: {
-        type: Number,
-        required: true,
-    },
-    discount: {
-        type: Number,
-        required: true,
+      type: String,
+      required: [true, "Product name is required"],
     },
     category: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Category',
-        required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+    },
+    description: {
+      type: String,
+      required: [true, "Product description is required"],
     },
     brand: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Brand',
-        required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Brand",
     },
-    stock: {
-        type: Number,
-        required: true,
-    },
-    images: [{
-        type: String,
-        required: true
-    }],
     status: {
-        type: String,
-        enum: ['active', 'blocked'],
-        default: 'active'
+      type: String,
+      enum: ["active", "blocked"],
+      default: "active",
     },
-}, { timestamps: true }
+    variants: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Variant",
+      },
+    ], // Array of Variant IDs
+  },
+  { timestamps: true }
 );
 
+const Product = mongoose.model("Product", productSchema);
 
-const Product = mongoose.model('Product', productSchema);
 export default Product;

@@ -10,9 +10,10 @@ import upload from '../middlewares/uploadMiddleware.js';
 
 const router = express.Router();
 
-router.post('/', authenticate, authorizeAdmin, upload.array('images', 5), addProduct);
-router.put('/:id', authenticate, authorizeAdmin, upload.array('images', 5), editProduct);
-router.put('/:id/toggle-status', authenticate, authorizeAdmin, toggleProductStatus);
+// Handle multiple files with any field name
+router.post('/', authenticate, authorizeAdmin, upload.any(), addProduct);
+router.put('/:productId/variants/:variantId', authenticate, authorizeAdmin, upload.any(), editProduct);
+router.put('/:productId/variants/:variantId/toggle-status', authenticate, authorizeAdmin, toggleProductStatus);
 router.get('/', authenticate, authorizeAdmin, getAllProducts);
 
 export default router;
