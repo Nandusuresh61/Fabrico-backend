@@ -13,6 +13,10 @@ const categorySchema = new mongoose.Schema(
             enum: ['Activated', 'Deactivated'],
             default: 'Activated',
         },
+        createdAt: {
+            type: Date,
+            default: Date.now,
+        },
     },
     { timestamps: true }
 );

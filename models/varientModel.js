@@ -32,6 +32,10 @@ const variantSchema = new mongoose.Schema(
       type: String,
       required: false,
     }],
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );

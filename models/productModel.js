@@ -29,6 +29,10 @@ const productSchema = new mongoose.Schema(
         ref: "Variant",
       },
     ], // Array of Variant IDs
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );
