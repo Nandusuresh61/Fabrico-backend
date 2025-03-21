@@ -222,3 +222,75 @@ export const toggleProductStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// ➡️ Toggle Product Main Status (Active/Blocked)
+export const toggleProductMainStatus = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    product.status = product.status === 'active' ? 'blocked' : 'active';
+    await product.save();
+
+    // Return populated product
+    const populatedProduct = await Product.findById(productId)
+      .populate('category', 'name')
+      .populate('brand', 'name')
+      .populate({
+        path: 'variants',
+        select: 'color stock price mainImage subImages isBlocked'
+      });
+
+    res.status(200).json({ 
+      message: 'Product status updated', 
+      product: populatedProduct
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get product by ID
+export const getProductById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const product = await Product.findById(id)
+      .populate('category', 'name status')
+      .populate('brand', 'name status')
+      .populate({
+        path: 'variants',
+        select: 'color stock price mainImage subImages isBlocked'
+      });
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Check if product is blocked
+    if (product.status === 'blocked') {
+      return res.status(403).json({ message: 'Product is not available' });
+    }
+
+    // Check if category or brand is blocked
+    if (product.category?.status === 'Deactivated' || product.brand?.status === 'Deactivated') {
+      return res.status(403).json({ message: 'Product is not available' });
+    }
+
+    // Filter out blocked variants
+    product.variants = product.variants.filter(variant => !variant.isBlocked);
+
+    // If no active variants, return error
+    if (product.variants.length === 0) {
+      return res.status(403).json({ message: 'Product is not available' });
+    }
+
+    res.status(200).json(product);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
