@@ -294,3 +294,47 @@ export const getProductById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
+export const getAllProductsForUsers = async (req, res) => {
+  try {
+    const { search, page = 1, limit = 5 } = req.query;
+
+    // Search filter (if search query exists)
+    const searchQuery = search
+      ? {
+          $or: [
+            { name: { $regex: search, $options: "i" } },
+            { description: { $regex: search, $options: "i" } },
+          ],
+        }
+      : {};
+
+    // Pagination and sorting
+    const skip = (page - 1) * limit;
+
+    // ✅ Populate category and brand names
+    const products = await Product.find(searchQuery)
+      .populate('category', 'name')
+      .populate('brand', 'name')
+      .populate({
+        path: 'variants',
+        select: 'color stock price mainImage subImages isBlocked'
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Total product count for pagination
+    const totalProducts = await Product.countDocuments(searchQuery);
+
+    res.status(200).json({
+      products,
+      totalProducts,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalProducts / limit),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

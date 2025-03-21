@@ -6,6 +6,7 @@ import {
   toggleProductStatus,
   toggleProductMainStatus,
   getProductById,
+  getAllProductsForUsers
 } from '../controllers/productController.js';
 import { authenticate, authorizeAdmin } from '../middlewares/authMiddleWare.js';
 import upload from '../middlewares/uploadMiddleware.js';
@@ -18,6 +19,7 @@ router.put('/:productId/variants/:variantId', authenticate, authorizeAdmin, uplo
 router.put('/:productId/variants/:variantId/toggle-status', authenticate, authorizeAdmin, toggleProductStatus);
 router.put('/:productId/toggle-status', authenticate, authorizeAdmin, toggleProductMainStatus);
 router.get('/', getAllProducts);
+router.get('/', getAllProductsForUsers);
 router.get('/:id', getProductById);
 
 export default router;
