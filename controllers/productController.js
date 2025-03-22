@@ -354,10 +354,10 @@ export const getAllProductsForUsers = async (req, res) => {
     let sortConfig = {};
     switch (sort) {
       case 'price-low':
-        sortConfig = { 'variants.price': 1 };
+        sortConfig = { 'variants.0.price': 1 };
         break;
       case 'price-high':
-        sortConfig = { 'variants.price': -1 };
+        sortConfig = { 'variants.0.price': -1 };
         break;
       case 'name-asc':
         sortConfig = { name: 1 };
@@ -409,6 +409,15 @@ export const getAllProductsForUsers = async (req, res) => {
       return true;
     });
 
+    // After filtering products, add this sorting
+    if (sort === 'price-low' || sort === 'price-high') {
+      filteredProducts.sort((a, b) => {
+        const priceA = Math.min(...a.variants.filter(v => !v.isBlocked).map(v => v.price));
+        const priceB = Math.min(...b.variants.filter(v => !v.isBlocked).map(v => v.price));
+        return sort === 'price-low' ? priceA - priceB : priceB - priceA;
+      });
+    }
+
     // Get total count for pagination
     const total = await Product.countDocuments(query);
 
@@ -420,6 +429,38 @@ export const getAllProductsForUsers = async (req, res) => {
     });
   } catch (error) {
     console.error('Error in getAllProductsForUsers:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Edit Product Name
+export const editProductName = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { name } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    product.name = name;
+    await product.save();
+
+    // Return populated product
+    const populatedProduct = await Product.findById(productId)
+      .populate('category', 'name')
+      .populate('brand', 'name')
+      .populate({
+        path: 'variants',
+        select: 'color stock price mainImage subImages isBlocked'
+      });
+
+    res.status(200).json({
+      message: 'Product name updated successfully',
+      product: populatedProduct
+    });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
