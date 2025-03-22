@@ -9,7 +9,7 @@ const router = express.Router();
 router.post('/', authenticate, authorizeAdmin, addCategory);
 router.put('/:id', authenticate, authorizeAdmin, editCategory);
 router.put('/:id/toggle-status', authenticate, authorizeAdmin, deleteCategory); //toggle category status
-router.get('/', authenticate, authorizeAdmin, getAllCategories);
+router.get('/', getAllCategories);
 
 
 export default router;
