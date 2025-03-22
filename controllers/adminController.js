@@ -35,8 +35,50 @@ const logoutAdmin = asyncHandler(async (req, res) => {
 
 
 const getAllUsers = asyncHandler(async (req, res) => {
-    const users = await User.find({}).select('-password'); 
-    res.status(200).json(users);
+    const { 
+        page = 1, 
+        limit = 5, 
+        search = '', 
+        status = 'all',
+        sortField = '_id',
+        sortOrder = 'desc'
+    } = req.query;
+
+    // Build filter conditions
+    const filterConditions = {};
+    if (status.toLowerCase() !== 'all') {
+        filterConditions.status = status;
+    }
+    
+    if (search) {
+        filterConditions.$or = [
+            { username: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } }
+        ];
+    }
+
+    // Calculate total documents and pages
+    const totalDocs = await User.countDocuments(filterConditions);
+    const totalPages = Math.ceil(totalDocs / limit);
+
+    // Get paginated and sorted results
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const users = await User.find(filterConditions)
+        .select('-password')
+        .sort({ [sortField]: sortOrder })
+        .limit(parseInt(limit))
+        .skip(skip);
+
+    res.status(200).json({
+        users,
+        pagination: {
+            page: parseInt(page),
+            totalPages,
+            totalDocs,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1
+        }
+    });
 });
 
 

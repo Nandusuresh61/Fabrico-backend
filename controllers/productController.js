@@ -153,41 +153,56 @@ export const editProduct = async (req, res) => {
 // Get all products (with search, pagination, and sorting)
 export const getAllProducts = async (req, res) => {
   try {
-    const { search, page = 1, limit = 5 } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const sortField = req.query.sortField || 'createdAt';
+    const sortOrder = req.query.sortOrder || 'desc';
+    const search = req.query.search || '';
+    const status = req.query.status || '';
 
-    // Search filter (if search query exists)
-    const searchQuery = search
-      ? {
-          $or: [
-            { name: { $regex: search, $options: "i" } },
-            { description: { $regex: search, $options: "i" } },
-          ],
-        }
-      : {};
+    // Build query
+    const query = {};
+    
+    // Search filter
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
 
-    // Pagination and sorting
+    // Status filter
+    if (status) {
+      query.status = status;
+    }
+
+    // Calculate skip value for pagination
     const skip = (page - 1) * limit;
 
-    // ✅ Populate category and brand names
-    const products = await Product.find(searchQuery)
+    // Create sort object
+    const sortObject = {};
+    sortObject[sortField] = sortOrder;
+
+    // Get total count for pagination
+    const total = await Product.countDocuments(query);
+
+    // Get products with pagination and sorting
+    const products = await Product.find(query)
       .populate('category', 'name')
       .populate('brand', 'name')
       .populate({
         path: 'variants',
         select: 'color stock price mainImage subImages isBlocked'
       })
-      .sort({ createdAt: -1 })
+      .sort(sortObject)
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(limit);
 
-    // Total product count for pagination
-    const totalProducts = await Product.countDocuments(searchQuery);
-
-    res.status(200).json({
+    res.json({
       products,
-      totalProducts,
-      currentPage: parseInt(page),
-      totalPages: Math.ceil(totalProducts / limit),
+      page,
+      totalPages: Math.ceil(total / limit),
+      total
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

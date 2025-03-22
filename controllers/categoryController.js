@@ -54,7 +54,47 @@ const deleteCategory = asyncHandler(async (req, res) => {
 
 //  Get All Categories 
 const getAllCategories = asyncHandler(async (req, res) => {
-    const categories = await Category.find({}); 
-    res.status(200).json(categories);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const sortField = req.query.sortField || 'createdAt';
+    const sortOrder = req.query.sortOrder || 'desc';
+    const search = req.query.search || '';
+    const status = req.query.status || '';
+
+    const query = {};
+    
+    // Search condition
+    if (search) {
+        query.name = { $regex: search, $options: 'i' };
+    }
+
+    // Status filter
+    if (status) {
+        query.status = status;
+    }
+
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
+
+    // Create sort object
+    const sortObject = {};
+    sortObject[sortField] = sortOrder;
+
+    // Get total count for pagination
+    const total = await Category.countDocuments(query);
+
+    // Get categories with pagination and sorting
+    const categories = await Category.find(query)
+        .sort(sortObject)
+        .skip(skip)
+        .limit(limit);
+
+    res.json({
+        categories,
+        page,
+        totalPages: Math.ceil(total / limit),
+        total
+    });
 });
+
 export { addCategory, editCategory, deleteCategory, getAllCategories };
