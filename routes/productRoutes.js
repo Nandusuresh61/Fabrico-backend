@@ -19,7 +19,7 @@ router.put('/:productId/variants/:variantId', authenticate, authorizeAdmin, uplo
 router.put('/:productId/variants/:variantId/toggle-status', authenticate, authorizeAdmin, toggleProductStatus);
 router.put('/:productId/toggle-status', authenticate, authorizeAdmin, toggleProductMainStatus);
 router.get('/', getAllProducts);
-router.get('/', getAllProductsForUsers);
+router.get('/users', getAllProductsForUsers);
 router.get('/:id', getProductById);
 
 export default router;

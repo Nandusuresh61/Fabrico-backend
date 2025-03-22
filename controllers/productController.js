@@ -1,6 +1,7 @@
 import Product from '../models/productModel.js';
 import cloudinary from '../config/cloudinary.js';
 import Variant from '../models/varientModel.js';
+import Category from '../models/categoryModel.js';
 
 // ➡️ Add Product
 export const addProduct = async (req, res) => {
@@ -310,46 +311,115 @@ export const getProductById = async (req, res) => {
   }
 };
 
-
 export const getAllProductsForUsers = async (req, res) => {
   try {
-    const { search, page = 1, limit = 5 } = req.query;
+    const {
+      search = '',
+      page = 1,
+      limit = 12,
+      sort = 'featured',
+      category = '',
+      brand = '',
+      minPrice = 0,
+      maxPrice = 1000
+    } = req.query;
 
-    // Search filter (if search query exists)
-    const searchQuery = search
-      ? {
-          $or: [
-            { name: { $regex: search, $options: "i" } },
-            { description: { $regex: search, $options: "i" } },
-          ],
-        }
-      : {};
+    // Build base query
+    const query = {
+      status: 'active', // Only active products
+    };
 
-    // Pagination and sorting
-    const skip = (page - 1) * limit;
+    // Search filter
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
 
-    // ✅ Populate category and brand names
-    const products = await Product.find(searchQuery)
-      .populate('category', 'name')
-      .populate('brand', 'name')
+    // Category filter
+    if (category && category !== 'all') {
+      const categoryObj = await Category.findOne({ name: { $regex: category, $options: "i" } });
+      if (categoryObj) {
+        query.category = categoryObj._id;
+      }
+    }
+
+    // Brand filter
+    if (brand && brand !== 'all') {
+      query.brand = brand;
+    }
+
+    // Sort configuration
+    let sortConfig = {};
+    switch (sort) {
+      case 'price-low':
+        sortConfig = { 'variants.price': 1 };
+        break;
+      case 'price-high':
+        sortConfig = { 'variants.price': -1 };
+        break;
+      case 'name-asc':
+        sortConfig = { name: 1 };
+        break;
+      case 'name-desc':
+        sortConfig = { name: -1 };
+        break;
+      default:
+        sortConfig = { createdAt: -1 }; // featured/default sorting
+    }
+
+    // Pagination
+    const skip = (Number(page) - 1) * Number(limit);
+
+    // Get products with all filters applied
+    const products = await Product.find(query)
+      .populate('category', 'name status')
+      .populate('brand', 'name status')
       .populate({
         path: 'variants',
         select: 'color stock price mainImage subImages isBlocked'
       })
-      .sort({ createdAt: -1 })
+      .sort(sortConfig)
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(Number(limit));
 
-    // Total product count for pagination
-    const totalProducts = await Product.countDocuments(searchQuery);
+    // Filter products post-query for variant-specific conditions
+    const filteredProducts = products.filter(product => {
+      // Check if product has valid category and brand
+      if (product.category?.status === 'Deactivated' || 
+          product.brand?.status === 'Deactivated') {
+        return false;
+      }
+
+      // Get non-blocked variants
+      const activeVariants = product.variants.filter(v => !v.isBlocked);
+      
+      // Check if product has any active variants
+      if (activeVariants.length === 0) {
+        return false;
+      }
+
+      // Check price range
+      const lowestPrice = Math.min(...activeVariants.map(v => v.price));
+      if (lowestPrice < Number(minPrice) || lowestPrice > Number(maxPrice)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // Get total count for pagination
+    const total = await Product.countDocuments(query);
 
     res.status(200).json({
-      products,
-      totalProducts,
-      currentPage: parseInt(page),
-      totalPages: Math.ceil(totalProducts / limit),
+      products: filteredProducts,
+      currentPage: Number(page),
+      totalPages: Math.ceil(total / Number(limit)),
+      totalProducts: filteredProducts.length
     });
   } catch (error) {
+    console.error('Error in getAllProductsForUsers:', error);
     res.status(500).json({ message: error.message });
   }
 };
