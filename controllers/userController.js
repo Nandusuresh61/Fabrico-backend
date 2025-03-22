@@ -164,6 +164,14 @@ const loginUser = asyncHandler(async (req, res) => {
         return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
+    // Check if user is blocked
+    if (user.status === 'blocked') {
+        return res.status(403).json({ 
+            message: 'Your account has been blocked. Please contact support.',
+            isBlocked: true
+        });
+    }
+
     // Check if user is verified
     if (!user.isVerified) {
         return res.status(401).json({ 
