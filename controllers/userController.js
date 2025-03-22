@@ -52,7 +52,7 @@ const createUser = asyncHandler(async (req, res) => {
 });
 
 // Send OTP via email
-const sendOtpEmail = async (email, otp) => {
+const sendOtpEmail = async (email, otp, subject = 'Your Verification Code for FABRICO') => {
     try {
         // Create reusable transporter
         const transporter = nodemailer.createTransport({
@@ -67,7 +67,7 @@ const sendOtpEmail = async (email, otp) => {
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
-            subject: 'Your Verification Code for FABRICO',
+            subject: subject,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2>Verify Your Email</h2>
@@ -202,10 +202,106 @@ const logoutUser = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'Logged out successfully' });
 });
 
+// Send forgot password OTP
+const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        return res.status(404).json({ message: 'User not found with this email.' });
+    }
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date();
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10);
+
+    // Save OTP to user
+    user.resetPasswordOtp = otp;
+    user.resetPasswordOtpExpiry = otpExpiry;
+    await user.save();
+
+    // Send OTP via email
+    await sendOtpEmail(email, otp, 'Password Reset');
+
+    res.status(200).json({ message: 'Password reset OTP sent successfully.' });
+});
+
+// Verify forgot password OTP
+const verifyForgotOtp = asyncHandler(async (req, res) => {
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({ 
+        email,
+        resetPasswordOtp: otp,
+        resetPasswordOtpExpiry: { $gt: new Date() }
+    });
+
+    if (!user) {
+        return res.status(400).json({ message: 'Invalid or expired OTP.' });
+    }
+
+    // Clear OTP fields
+    user.resetPasswordOtp = undefined;
+    user.resetPasswordOtpExpiry = undefined;
+    await user.save();
+
+    res.status(200).json({ message: 'OTP verified successfully.' });
+});
+
+// Resend forgot password OTP
+const resendForgotOtp = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date();
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10);
+
+    // Update user with new OTP
+    user.resetPasswordOtp = otp;
+    user.resetPasswordOtpExpiry = otpExpiry;
+    await user.save();
+
+    // Send new OTP via email
+    await sendOtpEmail(email, otp, 'Password Reset');
+
+    res.status(200).json({ message: 'OTP resent successfully.' });
+});
+
+// Reset password
+const resetPassword = asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Update password
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successful.' });
+});
+
 export {
     createUser,
     loginUser,
     logoutUser,
     verifyOtp,
-    resendOtp
+    resendOtp,
+    forgotPassword,
+    verifyForgotOtp,
+    resendForgotOtp,
+    resetPassword
 }
