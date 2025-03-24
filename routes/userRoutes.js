@@ -8,12 +8,14 @@ import {
     forgotPassword,
     verifyForgotOtp,
     resendForgotOtp,
-    resetPassword
+    resetPassword,
+    googleAuthController
 } from '../controllers/userController.js';
 import { authenticate } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
+router.route("/google").post(googleAuthController);
 router.post('/register', createUser);
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);

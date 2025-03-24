@@ -3,6 +3,8 @@ import asyncHandler from '../middlewares/asyncHandler.js';
 import generateToken from '../utils/createToken.js';
 import bcrypt from 'bcryptjs';
 import nodemailer from 'nodemailer';
+import { oauth2Client } from "../utils/googleConfig.js";
+import axios from "axios";
 
 // Create a new user
 const createUser = asyncHandler(async (req, res) => {
@@ -292,6 +294,57 @@ const resetPassword = asyncHandler(async (req, res) => {
     await user.save();
 
     res.status(200).json({ message: 'Password reset successful.' });
+});
+
+export const googleAuthController = asyncHandler(async (req, res) => {
+    const { code } = req.query;
+    
+    try {
+        const googleRes = await Promise.race([
+            oauth2Client.getToken(code),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timeout')), 15000)
+            )
+        ]);
+
+        oauth2Client.setCredentials(googleRes.tokens);
+
+        const userRes = await axios.get(
+            `https://www.googleapis.com/oauth2/v3/userinfo?alt=json&access_token=${googleRes.tokens.access_token}`,
+            {
+                timeout: 10000, // 10 seconds timeout
+            }
+        );
+
+        const { email, name } = userRes.data;
+        let user = await User.findOne({ email });
+        
+        if (!user) {
+            const randomPassword = Math.random().toString(36).substring(2, 15) +
+                Math.random().toString(36).substring(2, 15);
+            
+            user = await User.create({
+                username: name,
+                email,
+                password: randomPassword,
+                isVerified: true // Since it's Google OAuth, we can trust the email is verified
+            });
+        }
+
+        generateToken(res, user._id);
+
+        res.status(200).json({
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+        });
+    } catch (error) {
+        console.error('Google Auth Error:', error);
+        res.status(500).json({
+            message: error.message || 'Failed to authenticate with Google',
+            details: error.code === 'ETIMEDOUT' ? 'Connection timed out. Please try again.' : undefined
+        });
+    }
 });
 
 export {
