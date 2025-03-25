@@ -56,12 +56,11 @@ const createUser = asyncHandler(async (req, res) => {
 // Send OTP via email
 const sendOtpEmail = async (email, otp, subject = 'Your Verification Code for FABRICO') => {
     try {
-        // Create reusable transporter
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
                 user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_APP_PASSWORD // Use app password instead of regular password
+                pass: process.env.EMAIL_APP_PASSWORD 
             }
         });
 

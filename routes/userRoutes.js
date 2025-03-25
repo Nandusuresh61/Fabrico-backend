@@ -15,7 +15,7 @@ import { authenticate } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-router.route("/google").post(googleAuthController);
+router.route("/google").post(googleAuthController); // Google Auth Here
 router.post('/register', createUser);
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);
