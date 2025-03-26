@@ -17,7 +17,7 @@ const loginAdmin = asyncHandler(async (req, res) => {
         return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
-    generateToken(res, user._id);
+    generateToken(res, user._id, 'admin');
 
     res.status(200).json({
         _id: user._id,
@@ -29,7 +29,7 @@ const loginAdmin = asyncHandler(async (req, res) => {
 
 
 const logoutAdmin = asyncHandler(async (req, res) => {
-    res.cookie('jwt', '', { httpOnly: true, expires: new Date(0) });
+    res.cookie('admin_jwt', '', { httpOnly: true, expires: new Date(0) });
     res.status(200).json({ message: 'Logged out successfully' });
 });
 

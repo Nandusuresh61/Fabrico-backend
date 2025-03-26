@@ -3,7 +3,17 @@ import User from '../models/userModel.js';
 import asyncHandler from '../middlewares/asyncHandler.js';
 
 const authenticate = asyncHandler(async (req, res, next) => {
-    const token = req.cookies.jwt;
+    const userToken = req.cookies.user_jwt;
+    const adminToken = req.cookies.admin_jwt;
+
+    let token, role;
+    if(adminToken){
+        token = adminToken;
+        role = 'admin';
+    }else if(userToken){
+        token = userToken;
+        role = 'user';
+    }
 
     if (!token) {
         return res.status(401).json({ message: 'Not authorized, No token found.' });
@@ -16,6 +26,8 @@ const authenticate = asyncHandler(async (req, res, next) => {
         if (!req.user) {
             return res.status(401).json({ message: 'User not found, authentication failed.' });
         }
+
+        req.role = role;
 
         next();
     } catch (error) {
