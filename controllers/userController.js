@@ -318,6 +318,7 @@ export const googleAuthController = asyncHandler(async (req, res) => {
         const { email, name } = userRes.data;
         let user = await User.findOne({ email });
         
+        
         if (!user) {
             const randomPassword = Math.random().toString(36).substring(2, 15) +
                 Math.random().toString(36).substring(2, 15);
@@ -331,6 +332,8 @@ export const googleAuthController = asyncHandler(async (req, res) => {
         }
 
         generateToken(res, user._id);
+
+        if(user.status=='blocked')res.status(401).json({message: "You're blocked, Contact Support team"});
 
         res.status(200).json({
             _id: user._id,
