@@ -90,6 +90,7 @@ export const editProduct = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
     const { color, price, stock } = req.body;
+    const existingImages = JSON.parse(req.body.existingImages || '[]');
 
     // Find the product and variant
     const product = await Product.findById(productId);
@@ -102,19 +103,26 @@ export const editProduct = async (req, res) => {
       return res.status(404).json({ message: 'Variant not found' });
     }
 
-    // Upload new images if provided
-    if (req.files && req.files.length > 0) {
-      // Delete old images from Cloudinary
-      await Promise.all([
-        variant.mainImage,
-        ...variant.subImages
-      ].map(async (url) => {
-        const publicId = url.split('/').pop().split('.')[0];
-        await cloudinary.uploader.destroy(`products/${publicId}`);
-      }));
+    // Get current images that need to be deleted
+    const currentImages = [variant.mainImage, ...variant.subImages];
+    const imagesToDelete = currentImages.filter(img => !existingImages.includes(img));
 
-      // Upload new images
-      const imageUrls = await Promise.all(
+    // Delete removed images from Cloudinary
+    if (imagesToDelete.length > 0) {
+      await Promise.all(
+        imagesToDelete.map(async (url) => {
+          if (url) {
+            const publicId = url.split('/').pop().split('.')[0];
+            await cloudinary.uploader.destroy(`products/${publicId}`);
+          }
+        })
+      );
+    }
+
+    // Upload new images if provided
+    let newImageUrls = [];
+    if (req.files && req.files.length > 0) {
+      newImageUrls = await Promise.all(
         req.files.map((file) => {
           return new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
@@ -128,15 +136,22 @@ export const editProduct = async (req, res) => {
           });
         })
       );
+    }
 
-      variant.mainImage = imageUrls[0];
-      variant.subImages = imageUrls.slice(1);
+    // Combine existing and new images
+    const allImages = [...existingImages, ...newImageUrls];
+    
+    // Ensure we have at least one image
+    if (allImages.length === 0) {
+      return res.status(400).json({ message: 'At least one image is required' });
     }
 
     // Update variant fields
     variant.color = color || variant.color;
     variant.price = price || variant.price;
     variant.stock = stock || variant.stock;
+    variant.mainImage = allImages[0];
+    variant.subImages = allImages.slice(1);
 
     await variant.save();
 
