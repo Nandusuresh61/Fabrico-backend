@@ -9,9 +9,13 @@ const addCategory = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: 'Category name is required' });
     }
 
-    const existingCategory = await Category.findOne({ name });
+    // Case-sensitive check for existing category
+    const existingCategory = await Category.findOne({ 
+        name: { $regex: new RegExp(`^${name}$`, 'i') }
+    });
+    
     if (existingCategory) {
-        return res.status(400).json({ message: 'Category already exists' });
+        return res.status(400).json({ message: 'Category name already exists' });
     }
 
     const category = new Category({ name });
@@ -29,6 +33,16 @@ const editCategory = asyncHandler(async (req, res) => {
 
     if (!category) {
         return res.status(404).json({ message: 'Category not found' });
+    }
+
+    // Check if the new name already exists (excluding the current category)
+    const existingCategory = await Category.findOne({
+        _id: { $ne: id },
+        name: { $regex: new RegExp(`^${name}$`, 'i') }
+    });
+
+    if (existingCategory) {
+        return res.status(400).json({ message: 'Category name already exists' });
     }
 
     category.name = name || category.name;
