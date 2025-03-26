@@ -331,9 +331,14 @@ export const googleAuthController = asyncHandler(async (req, res) => {
             });
         }
 
-        generateToken(res, user._id);
+        if(user.status=='blocked') {
+            return res.status(403).json({
+                message: "You're blocked. Contact Support team",
+                isBlocked: true
+            });
+        }
 
-        if(user.status=='blocked')res.status(401).json({message: "You're blocked, Contact Support team"});
+        generateToken(res, user._id);
 
         res.status(200).json({
             _id: user._id,
