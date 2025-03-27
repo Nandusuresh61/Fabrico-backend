@@ -18,6 +18,9 @@ const userSchema = new mongoose.Schema(
     },
     resetPasswordOtp: { type: String },
     resetPasswordOtpExpiry: { type: Date },
+    emailUpdateOtp: { type: String },
+    emailUpdateOtpExpiry: { type: Date },
+    newEmailPending: { type: String }
   },
   { timestamps: true }
 );

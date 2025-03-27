@@ -9,7 +9,10 @@ import {
     verifyForgotOtp,
     resendForgotOtp,
     resetPassword,
-    googleAuthController
+    googleAuthController,
+    verifyEmailUpdateOtp,
+    updateUserProfile,
+    sendEmailUpdateOtp
 } from '../controllers/userController.js';
 import { authenticate } from '../middlewares/authMiddleware.js';
 
@@ -25,5 +28,8 @@ router.post('/forgot-password', forgotPassword);
 router.post('/verify-forgot-otp', verifyForgotOtp);
 router.post('/resend-forgot-otp', resendForgotOtp);
 router.post('/reset-password', resetPassword);
+router.post('/verify-email-update', authenticate, verifyEmailUpdateOtp);
+router.post('/update-profile', authenticate, updateUserProfile);
+router.post('/send-email-update-otp', authenticate, sendEmailUpdateOtp);
 
 export default router;

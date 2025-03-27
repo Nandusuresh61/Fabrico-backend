@@ -363,6 +363,91 @@ export const googleAuthController = asyncHandler(async (req, res) => {
     }
 });
 
+// Send OTP for email update verification
+const sendEmailUpdateOtp = asyncHandler(async (req, res) => {
+    const { newEmail } = req.body;
+    const userId = req.user._id;
+
+    // Check if email already exists
+    const emailExists = await User.findOne({ email: newEmail });
+    if (emailExists) {
+        return res.status(400).json({ message: 'Email already exists.' });
+    }
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date();
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10);
+
+    // Save OTP to user
+    const user = await User.findById(userId);
+    user.emailUpdateOtp = otp;
+    user.emailUpdateOtpExpiry = otpExpiry;
+    user.newEmailPending = newEmail;
+    await user.save();
+
+    // Send OTP via email
+    await sendOtpEmail(newEmail, otp, 'Email Update Verification');
+
+    res.status(200).json({ message: 'Verification code sent to new email.' });
+});
+
+// Verify email update OTP
+const verifyEmailUpdateOtp = asyncHandler(async (req, res) => {
+    const { otp } = req.body;
+    const userId = req.user._id;
+
+    const user = await User.findOne({ 
+        _id: userId,
+        emailUpdateOtp: otp,
+        emailUpdateOtpExpiry: { $gt: new Date() }
+    });
+
+    if (!user) {
+        return res.status(400).json({ message: 'Invalid or expired verification code.' });
+    }
+
+    // Update email
+    user.email = user.newEmailPending;
+    user.emailUpdateOtp = undefined;
+    user.emailUpdateOtpExpiry = undefined;
+    user.newEmailPending = undefined;
+    await user.save();
+
+    res.status(200).json({ 
+        message: 'Email updated successfully.',
+        email: user.email 
+    });
+});
+
+// Update user profile
+const updateUserProfile = asyncHandler(async (req, res) => {
+    const { username, phone, profileImage } = req.body;
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (username) user.username = username;
+    if (phone) user.phone = phone;
+    if (profileImage) user.profileImage = profileImage;
+
+    await user.save();
+
+    res.status(200).json({
+        message: 'Profile updated successfully',
+        user: {
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+            phone: user.phone,
+            profileImage: user.profileImage
+        }
+    });
+});
+
 export {
     createUser,
     loginUser,
@@ -372,5 +457,8 @@ export {
     forgotPassword,
     verifyForgotOtp,
     resendForgotOtp,
-    resetPassword
+    resetPassword,
+    sendEmailUpdateOtp,
+    verifyEmailUpdateOtp,
+    updateUserProfile
 }
