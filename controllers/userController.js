@@ -8,9 +8,9 @@ import axios from "axios";
 
 // Create a new user
 const createUser = asyncHandler(async (req, res) => {
-    const { username, email, password, profileImage } = req.body;
+    const { username, email, phone, password, profileImage } = req.body;
 
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !phone) {
         return res.status(400).json({ message: 'Please fill all required fields.' });
     }
 
@@ -36,6 +36,7 @@ const createUser = asyncHandler(async (req, res) => {
     const newUser = new User({
         username,
         email,
+        phone,
         password: hashedPassword,
         profileImage,
         isVerified: false,
@@ -53,6 +54,7 @@ const createUser = asyncHandler(async (req, res) => {
         _id: newUser._id,
         username: newUser.username,
         email: newUser.email,
+        phone: newUser.phone,
         isAdmin: newUser.isAdmin,
         profileImage: newUser.profileImage
     });

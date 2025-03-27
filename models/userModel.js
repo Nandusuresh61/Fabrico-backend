@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },
     password: { type: String, required: true },
     profileImage: { type: String, default: null },
+    phone:{ type: Number },
     status: { type: String, enum: ['active', 'blocked'], default: 'active' },
     isAdmin: { type: Boolean, default: false },
     otp: { type: String},
