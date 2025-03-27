@@ -304,6 +304,33 @@ const resetPassword = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'Password reset successful.' });
 });
 
+// Change password
+const changePassword = asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+        return res.status(401).json({ message: 'Current password is incorrect.' });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: 'Password changed successfully.' });
+});
+
 export const googleAuthController = asyncHandler(async (req, res) => {
     const { code } = req.query;
     
@@ -460,5 +487,6 @@ export {
     resetPassword,
     sendEmailUpdateOtp,
     verifyEmailUpdateOtp,
-    updateUserProfile
+    updateUserProfile,
+    changePassword
 }

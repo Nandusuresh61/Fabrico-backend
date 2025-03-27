@@ -12,7 +12,8 @@ import {
     googleAuthController,
     verifyEmailUpdateOtp,
     updateUserProfile,
-    sendEmailUpdateOtp
+    sendEmailUpdateOtp,
+    changePassword
 } from '../controllers/userController.js';
 import { authenticate } from '../middlewares/authMiddleware.js';
 
@@ -31,5 +32,6 @@ router.post('/reset-password', resetPassword);
 router.post('/verify-email-update', authenticate, verifyEmailUpdateOtp);
 router.post('/update-profile', authenticate, updateUserProfile);
 router.post('/send-email-update-otp', authenticate, sendEmailUpdateOtp);
+router.post('/change-password', authenticate, changePassword);
 
 export default router;
