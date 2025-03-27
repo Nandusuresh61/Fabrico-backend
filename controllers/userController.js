@@ -201,7 +201,8 @@ const loginUser = asyncHandler(async (req, res) => {
         username: user.username,
         email: user.email,
         isAdmin: user.isAdmin,
-        profileImage: user.profileImage
+        profileImage: user.profileImage,
+        phone: user.phone
     });
 });
 
