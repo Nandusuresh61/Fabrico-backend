@@ -6,13 +6,14 @@ const authenticate = asyncHandler(async (req, res, next) => {
     const userToken = req.cookies.user_jwt;
     const adminToken = req.cookies.admin_jwt;
 
-    let token, role;
-    if(adminToken){
+    // Get the requested role from the route
+    const requestedRole = req.baseUrl.includes('/admin') ? 'admin' : 'user';
+    
+    let token;
+    if (requestedRole === 'admin' && adminToken) {
         token = adminToken;
-        role = 'admin';
-    }else if(userToken){
+    } else if (requestedRole === 'user' && userToken) {
         token = userToken;
-        role = 'user';
     }
 
     if (!token) {
@@ -27,7 +28,8 @@ const authenticate = asyncHandler(async (req, res, next) => {
             return res.status(401).json({ message: 'User not found, authentication failed.' });
         }
 
-        req.role = role;
+        // Set the role based on the token used
+        req.role = requestedRole;
 
         next();
     } catch (error) {

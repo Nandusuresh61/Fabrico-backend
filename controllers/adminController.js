@@ -29,7 +29,11 @@ const loginAdmin = asyncHandler(async (req, res) => {
 
 
 const logoutAdmin = asyncHandler(async (req, res) => {
-    res.cookie('admin_jwt', '', { httpOnly: true, expires: new Date(0) });
+    res.cookie('admin_jwt', '', { 
+        httpOnly: true, 
+        expires: new Date(0),
+        path: '/api/admin'  // Specify the path
+    });
     res.status(200).json({ message: 'Logged out successfully' });
 });
 
