@@ -7,7 +7,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import brandRoutes from './routes/brandRoutes.js';
 import productRoutes from './routes/productRoutes.js'
-
+import addressRoutes from './routes/addressRoutes.js'
 
 
 

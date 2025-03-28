@@ -5,6 +5,15 @@ const addressSchema = new mongoose.Schema({
         ref: "User",
         required: true,
     },
+    type: {
+        type: String,
+        enum: ['home', 'work'],
+        default: 'home'
+    },
+    name: {
+        type: String,
+        required: true,
+    },
     street: {
         type: String,
         required: true,
@@ -21,11 +30,11 @@ const addressSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    country: {
+    phone: {
         type: String,
         required: true,
     },
-    isDefault:{
+    isDefault: {
         type: Boolean,
         default: false,
     }
