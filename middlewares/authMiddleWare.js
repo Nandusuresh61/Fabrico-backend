@@ -3,18 +3,7 @@ import User from '../models/userModel.js';
 import asyncHandler from '../middlewares/asyncHandler.js';
 
 const authenticate = asyncHandler(async (req, res, next) => {
-    const userToken = req.cookies.user_jwt;
-    const adminToken = req.cookies.admin_jwt;
-
-    // Get the requested role from the route
-    const requestedRole = req.baseUrl.includes('/admin') ? 'admin' : 'user';
-    
-    let token;
-    if (requestedRole === 'admin' && adminToken) {
-        token = adminToken;
-    } else if (requestedRole === 'user' && userToken) {
-        token = userToken;
-    }
+    const token = req.cookies.jwt;
 
     if (!token) {
         return res.status(401).json({ message: 'Not authorized, No token found.' });
@@ -27,9 +16,6 @@ const authenticate = asyncHandler(async (req, res, next) => {
         if (!req.user) {
             return res.status(401).json({ message: 'User not found, authentication failed.' });
         }
-
-        // Set the role based on the token used
-        req.role = requestedRole;
 
         next();
     } catch (error) {

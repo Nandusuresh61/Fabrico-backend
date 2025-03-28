@@ -194,7 +194,7 @@ const loginUser = asyncHandler(async (req, res) => {
         return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
-    generateToken(res, user._id, 'user');
+    generateToken(res, user._id);
 
     res.status(200).json({
         _id: user._id,
@@ -208,11 +208,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
 // Logout User
 const logoutUser = asyncHandler(async (req, res) => {
-    res.cookie('user_jwt', '', { 
-        httpOnly: true, 
-        expires: new Date(0),
-        path: '/api/users'  // Specify the path
-    });
+    res.cookie('jwt', '', { httpOnly: true, expires: new Date(0) });
     res.status(200).json({ message: 'Logged out successfully' });
 });
 
