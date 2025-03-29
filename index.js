@@ -8,6 +8,7 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import brandRoutes from './routes/brandRoutes.js';
 import productRoutes from './routes/productRoutes.js'
 import addressRoutes from './routes/addressRoutes.js'
+import wishlistRoutes from './routes/wishlistRoutes.js'
 
 
 
@@ -44,7 +45,7 @@ app.use('/api/brands', brandRoutes);
 app.use('/api/products', productRoutes);
 
 app.use('/api/addresses', addressRoutes);
-
+app.use('/api/wishlist', wishlistRoutes);
 
 
 app.listen(port, (console.log(`server is running on port ${port}`)))
