@@ -56,6 +56,7 @@ export const addProduct = async (req, res) => {
         color: variant.color,
         stock: variant.quantity,
         price: variant.price,
+        discountPrice: variant.discountPrice || null,
         mainImage: imageUrls[0],
         subImages: imageUrls.slice(1)
       });
@@ -75,7 +76,7 @@ export const addProduct = async (req, res) => {
       .populate('brand', 'name')
       .populate({
         path: 'variants',
-        select: 'color stock price mainImage subImages isBlocked'
+        select: 'color stock price discountPrice mainImage subImages isBlocked'
       });
 
     res.status(201).json({ message: 'Product added successfully', product: populatedProduct });
@@ -89,7 +90,7 @@ export const addProduct = async (req, res) => {
 export const editProduct = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
-    const { color, price, stock } = req.body;
+    const { color, price, stock, discountPrice } = req.body;
     const existingImages = JSON.parse(req.body.existingImages || '[]');
 
     // Find the product and variant
@@ -149,6 +150,7 @@ export const editProduct = async (req, res) => {
     // Update variant fields
     variant.color = color || variant.color;
     variant.price = price || variant.price;
+    variant.discountPrice = discountPrice || null;
     variant.stock = stock || variant.stock;
     variant.mainImage = allImages[0];
     variant.subImages = allImages.slice(1);
@@ -208,7 +210,7 @@ export const getAllProducts = async (req, res) => {
       .populate('brand', 'name')
       .populate({
         path: 'variants',
-        select: 'color stock price mainImage subImages isBlocked'
+        select: 'color stock price discountPrice mainImage subImages isBlocked'
       })
       .sort(sortObject)
       .skip(skip)
@@ -273,7 +275,7 @@ export const toggleProductMainStatus = async (req, res) => {
       .populate('brand', 'name')
       .populate({
         path: 'variants',
-        select: 'color stock price mainImage subImages isBlocked'
+        select: 'color stock price discountPrice mainImage subImages isBlocked'
       });
 
     res.status(200).json({ 
@@ -295,7 +297,7 @@ export const getProductById = async (req, res) => {
       .populate('brand', 'name status')
       .populate({
         path: 'variants',
-        select: 'color stock price mainImage subImages isBlocked'
+        select: 'color stock price discountPrice mainImage subImages isBlocked'
       });
 
     if (!product) {
@@ -393,7 +395,7 @@ export const getAllProductsForUsers = async (req, res) => {
       .populate('brand', 'name status')
       .populate({
         path: 'variants',
-        select: 'color stock price mainImage subImages isBlocked'
+        select: 'color stock price discountPrice mainImage subImages isBlocked'
       })
       .sort(sortConfig)
       .skip(skip)
@@ -416,7 +418,13 @@ export const getAllProductsForUsers = async (req, res) => {
       }
 
       // Check price range
-      const lowestPrice = Math.min(...activeVariants.map(v => v.price));
+      const getEffectivePrice = (variant) => {
+        return variant.discountPrice && variant.discountPrice < variant.price 
+            ? variant.discountPrice 
+            : variant.price;
+      };
+
+      const lowestPrice = Math.min(...activeVariants.map(v => getEffectivePrice(v)));
       if (lowestPrice < Number(minPrice) || lowestPrice > Number(maxPrice)) {
         return false;
       }
@@ -427,8 +435,10 @@ export const getAllProductsForUsers = async (req, res) => {
     // After filtering products, add this sorting
     if (sort === 'price-low' || sort === 'price-high') {
       filteredProducts.sort((a, b) => {
-        const priceA = Math.min(...a.variants.filter(v => !v.isBlocked).map(v => v.price));
-        const priceB = Math.min(...b.variants.filter(v => !v.isBlocked).map(v => v.price));
+        const priceA = Math.min(...a.variants.filter(v => !v.isBlocked)
+            .map(v => getEffectivePrice(v)));
+        const priceB = Math.min(...b.variants.filter(v => !v.isBlocked)
+            .map(v => getEffectivePrice(v)));
         return sort === 'price-low' ? priceA - priceB : priceB - priceA;
       });
     }
@@ -468,7 +478,7 @@ export const editProductName = async (req, res) => {
       .populate('brand', 'name')
       .populate({
         path: 'variants',
-        select: 'color stock price mainImage subImages isBlocked'
+        select: 'color stock price discountPrice mainImage subImages isBlocked'
       });
 
     res.status(200).json({

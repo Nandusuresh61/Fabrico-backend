@@ -20,6 +20,10 @@ const variantSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    discountPrice: {
+      type: Number,
+      default: null,
+    },
     isBlocked: {  // Add this field
       type: Boolean,
       default: false,
