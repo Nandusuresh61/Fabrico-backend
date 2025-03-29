@@ -7,18 +7,18 @@ import Cart from '../models/cartModel.js';
 const getCart = asyncHandler(async (req, res) => {
     let cart = await Cart.findOne({ user: req.user._id })
         .populate({
-            path: 'products',
-            populate: {
-                path: 'variants',
-                select: 'color price discountPrice mainImage stock'
-            },
-            select: 'name brand category variants'
+            path: 'items.product',
+            select: 'name brand category'
+        })
+        .populate({
+            path: 'items.variant',
+            select: 'color price discountPrice mainImage stock'
         });
 
     if (!cart) {
         cart = await Cart.create({
             user: req.user._id,
-            products: []
+            items: []
         });
     }
 
@@ -29,55 +29,63 @@ const getCart = asyncHandler(async (req, res) => {
 // @route   POST /api/cart
 // @access  Private
 const addToCart = asyncHandler(async (req, res) => {
-    const { productId } = req.body;
+    const { productId, variantId, quantity = 1 } = req.body;
 
     let cart = await Cart.findOne({ user: req.user._id });
 
     if (!cart) {
         cart = await Cart.create({
             user: req.user._id,
-            products: []
+            items: []
         });
     }
 
-    // Check if product already exists
-    const productExists = cart.products.find(
-        product => product.toString() === productId
+    // Check if product variant already exists
+    const itemExists = cart.items.find(
+        item => item.product.toString() === productId && 
+               item.variant.toString() === variantId
     );
 
-    if (productExists) {
-        return res.status(400).json({ message: 'Product already in cart' });
+    if (itemExists) {
+        itemExists.quantity += quantity;
+        await cart.save();
+    } else {
+        cart.items.push({
+            product: productId,
+            variant: variantId,
+            quantity
+        });
+        await cart.save();
     }
-
-    cart.products.push(productId);
-    await cart.save();
 
     // Populate cart before sending response
     cart = await Cart.findOne({ user: req.user._id })
         .populate({
-            path: 'products',
-            populate: {
-                path: 'variants',
-                select: 'color price discountPrice mainImage stock'
-            },
-            select: 'name brand category variants'
+            path: 'items.product',
+            select: 'name brand category'
+        })
+        .populate({
+            path: 'items.variant',
+            select: 'color price discountPrice mainImage stock'
         });
 
     res.status(201).json(cart);
 });
 
 // @desc    Remove from cart
-// @route   DELETE /api/cart/:productId
+// @route   DELETE /api/cart/:itemId
 // @access  Private
 const removeFromCart = asyncHandler(async (req, res) => {
+    const { itemId } = req.params;
+    
     let cart = await Cart.findOne({ user: req.user._id });
 
     if (!cart) {
         return res.status(404).json({ message: 'Cart not found' });
     }
 
-    cart.products = cart.products.filter(
-        product => product.toString() !== req.params.productId
+    cart.items = cart.items.filter(
+        item => item._id.toString() !== itemId
     );
 
     await cart.save();
@@ -85,12 +93,12 @@ const removeFromCart = asyncHandler(async (req, res) => {
     // Populate cart before sending response
     cart = await Cart.findOne({ user: req.user._id })
         .populate({
-            path: 'products',
-            populate: {
-                path: 'variants',
-                select: 'color price discountPrice mainImage stock'
-            },
-            select: 'name brand category variants'
+            path: 'items.product',
+            select: 'name brand category'
+        })
+        .populate({
+            path: 'items.variant',
+            select: 'color price discountPrice mainImage stock'
         });
 
     res.json(cart);
