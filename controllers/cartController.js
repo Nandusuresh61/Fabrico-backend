@@ -116,4 +116,48 @@ const removeFromCart = asyncHandler(async (req, res) => {
     res.json(cart);
 });
 
-export { getCart, addToCart, removeFromCart };
+// @desc    Update cart item quantity
+// @route   PATCH /api/cart/:itemId
+// @access  Private
+const updateCartQuantity = asyncHandler(async (req, res) => {
+    const { itemId } = req.params;
+    const { quantity } = req.body;
+
+    let cart = await Cart.findOne({ user: req.user._id });
+
+    if (!cart) {
+        return res.status(404).json({ message: 'Cart not found' });
+    }
+
+    const cartItem = cart.items.find(item => item._id.toString() === itemId);
+    
+    if (!cartItem) {
+        return res.status(404).json({ message: 'Item not found in cart' });
+    }
+
+    if (quantity < 1) {
+        return res.status(400).json({ message: 'Quantity must be at least 1' });
+    }
+
+    cartItem.quantity = quantity;
+    await cart.save();
+
+    // Populate cart before sending response
+    cart = await Cart.findOne({ user: req.user._id })
+        .populate({
+            path: 'items.product',
+            select: 'name brand category',
+            populate: [
+                { path: 'brand', select: 'name' },
+                { path: 'category', select: 'name' }
+            ]
+        })
+        .populate({
+            path: 'items.variant',
+            select: 'color price discountPrice mainImage stock'
+        });
+
+    res.json(cart);
+});
+
+export { getCart, addToCart, removeFromCart, updateCartQuantity };

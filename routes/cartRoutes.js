@@ -2,7 +2,8 @@ import express from 'express';
 import { 
     getCart,
     addToCart,
-    removeFromCart
+    removeFromCart,
+    updateCartQuantity
 } from '../controllers/cartController.js';
 import { authenticate } from '../middlewares/authMiddleWare.js';
 
@@ -15,6 +16,7 @@ router.route('/')
     .post(addToCart);
 
 router.route('/:itemId')
-    .delete(removeFromCart);
+    .delete(removeFromCart)
+    .patch(updateCartQuantity);
 
 export default router;
