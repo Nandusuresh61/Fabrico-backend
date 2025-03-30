@@ -160,4 +160,20 @@ const updateCartQuantity = asyncHandler(async (req, res) => {
     res.json(cart);
 });
 
-export { getCart, addToCart, removeFromCart, updateCartQuantity };
+// @desc    Clear cart
+// @route   DELETE /api/cart
+// @access  Private
+const clearCart = asyncHandler(async (req, res) => {
+    let cart = await Cart.findOne({ user: req.user._id });
+
+    if (!cart) {
+        return res.status(404).json({ message: 'Cart not found' });
+    }
+
+    cart.items = [];
+    await cart.save();
+
+    res.json(cart);
+});
+
+export { getCart, addToCart, removeFromCart, updateCartQuantity, clearCart };
