@@ -8,7 +8,11 @@ const getCart = asyncHandler(async (req, res) => {
     let cart = await Cart.findOne({ user: req.user._id })
         .populate({
             path: 'items.product',
-            select: 'name brand category'
+            select: 'name brand category',
+            populate: [
+                { path: 'brand', select: 'name' },
+                { path: 'category', select: 'name' }
+            ]
         })
         .populate({
             path: 'items.variant',
@@ -62,7 +66,11 @@ const addToCart = asyncHandler(async (req, res) => {
     cart = await Cart.findOne({ user: req.user._id })
         .populate({
             path: 'items.product',
-            select: 'name brand category'
+            select: 'name brand category',
+            populate: [
+                { path: 'brand', select: 'name' },
+                { path: 'category', select: 'name' }
+            ]
         })
         .populate({
             path: 'items.variant',
@@ -94,7 +102,11 @@ const removeFromCart = asyncHandler(async (req, res) => {
     cart = await Cart.findOne({ user: req.user._id })
         .populate({
             path: 'items.product',
-            select: 'name brand category'
+            select: 'name brand category',
+            populate: [
+                { path: 'brand', select: 'name' },
+                { path: 'category', select: 'name' }
+            ]
         })
         .populate({
             path: 'items.variant',

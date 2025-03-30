@@ -8,7 +8,17 @@ const getWishlist = asyncHandler(async (req, res) => {
     let wishlist = await Wishlist.findOne({ user: req.user._id })
         .populate({
             path: 'items.product',
-            select: 'name brand category'
+            select: 'name brand category',
+            populate: [
+                {
+                    path: 'brand',
+                    select: 'name'
+                },
+                {
+                    path: 'category',
+                    select: 'name'
+                }
+            ]
         })
         .populate({
             path: 'items.variant',
@@ -60,7 +70,11 @@ const addToWishlist = asyncHandler(async (req, res) => {
     wishlist = await Wishlist.findOne({ user: req.user._id })
         .populate({
             path: 'items.product',
-            select: 'name brand category'
+            select: 'name brand category',
+            populate: {
+                path: 'brand',
+                select: 'name'
+            }
         })
         .populate({
             path: 'items.variant',
@@ -90,7 +104,11 @@ const removeFromWishlist = asyncHandler(async (req, res) => {
     wishlist = await Wishlist.findOne({ user: req.user._id })
         .populate({
             path: 'items.product',
-            select: 'name brand category'
+            select: 'name brand category',
+            populate: {
+                path: 'brand',
+                select: 'name'
+            }
         })
         .populate({
             path: 'items.variant',
