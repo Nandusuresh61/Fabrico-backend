@@ -83,7 +83,7 @@ export const getOrders = asyncHandler(async (req, res) => {
 
     // Execute query with pagination and sorting
     const orders = await Order.find(query)
-        .populate('user', 'name email')
+        .populate('user', 'username email')
         .populate('items.product', 'name price images')
         .populate('items.variant', 'name sku')
         .populate('shippingAddress')
