@@ -1,5 +1,6 @@
 import asyncHandler from '../middlewares/asyncHandler.js';
 import Order from '../models/orderModel.js';
+import User from '../models/userModel.js';
 
 // Helper function to generate order ID
 const generateOrderId = async () => {
@@ -18,9 +19,6 @@ const generateOrderId = async () => {
     return `ORD-${formattedNumber}`;
 };
 
-// @desc    Create new order
-// @route   POST /api/orders
-// @access  Private
 export const createOrder = asyncHandler(async (req, res) => {
     const {
         items,
@@ -54,28 +52,61 @@ export const createOrder = asyncHandler(async (req, res) => {
     }
 });
 
-// @desc    Get logged in user orders
-// @route   GET /api/orders
-// @access  Private
+
 export const getOrders = asyncHandler(async (req, res) => {
-    const orders = await Order.find({ user: req.user._id })
-        .populate('items.product')
-        .populate('items.variant')
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const status = req.query.status || '';
+    const sortBy = req.query.sortBy || 'createdAt';
+    const sortOrder = req.query.sortOrder || 'desc';
+
+    // Build query
+    const query = {};
+
+    // Search functionality
+    if (search) {
+        query.$or = [
+            { orderId: { $regex: search, $options: 'i' } },
+            { 'user.name': { $regex: search, $options: 'i' } },
+            { 'user.email': { $regex: search, $options: 'i' } }
+        ];
+    }
+
+    // Status filter
+    if (status && status !== 'all') {
+        query.status = status;
+    }
+
+    // Count total documents
+    const total = await Order.countDocuments(query);
+
+    // Execute query with pagination and sorting
+    const orders = await Order.find(query)
+        .populate('user', 'name email')
+        .populate('items.product', 'name price images')
+        .populate('items.variant', 'name sku')
         .populate('shippingAddress')
-        .sort('-createdAt');
-    res.json(orders);
+        .sort({ [sortBy]: sortOrder })
+        .skip((page - 1) * limit)
+        .limit(limit);
+
+    res.json({
+        orders,
+        page,
+        pages: Math.ceil(total / limit),
+        total
+    });
 });
 
-// @desc    Get order by ID
-// @route   GET /api/orders/:id
-// @access  Private
 export const getOrderById = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id)
+        .populate('user', 'name email')
         .populate('items.product')
         .populate('items.variant')
         .populate('shippingAddress');
 
-    if (order && (order.user.toString() === req.user._id.toString())) {
+    if (order && (order.user._id.toString() === req.user._id.toString() || req.user.isAdmin)) {
         res.json(order);
     } else {
         res.status(404);
@@ -83,30 +114,30 @@ export const getOrderById = asyncHandler(async (req, res) => {
     }
 });
 
-// @desc    Update order status
-// @route   PUT /api/orders/:id/status
-// @access  Private
 export const updateOrderStatus = asyncHandler(async (req, res) => {
     const { status } = req.body;
-    const order = await Order.findById(req.params.id);
+    let order = await Order.findById(req.params.id);
 
-    if (order && (order.user.toString() === req.user._id.toString())) {
+    if (order) {
         order.status = status;
-        const updatedOrder = await order.save();
-        res.json(updatedOrder);
+        order = await order.save();
+        // Populate the user and other necessary fields before sending response
+        order = await Order.findById(order._id)
+            .populate('user', 'name email')
+            .populate('items.product', 'name price images')
+            .populate('items.variant', 'name sku')
+            .populate('shippingAddress');
+        res.json(order);
     } else {
         res.status(404);
         throw new Error('Order not found');
     }
 });
 
-// @desc    Cancel order
-// @route   PUT /api/orders/:id/cancel
-// @access  Private
 export const cancelOrder = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id);
 
-    if (order && (order.user.toString() === req.user._id.toString())) {
+    if (order && (order.user.toString() === req.user._id.toString() || req.user.isAdmin)) {
         if (order.status === 'pending' || order.status === 'processing') {
             order.status = 'cancelled';
             const updatedOrder = await order.save();
@@ -119,4 +150,57 @@ export const cancelOrder = asyncHandler(async (req, res) => {
         res.status(404);
         throw new Error('Order not found');
     }
+});
+
+
+export const verifyReturnRequest = asyncHandler(async (req, res) => {
+    const { status } = req.body;
+    let order = await Order.findById(req.params.id);
+
+    if (!order) {
+        res.status(404);
+        throw new Error('Order not found');
+    }
+
+    // Find the specific item in the order
+    const item = order.items.find(item => item._id.toString() === req.params.itemId);
+
+    if (!item) {
+        res.status(404);
+        throw new Error('Order item not found');
+    }
+
+    if (!item.returnRequest || item.returnRequest.status !== 'requested') {
+        res.status(400);
+        throw new Error('No active return request found for this item');
+    }
+
+    // Update return request status
+    item.returnRequest.status = status;
+    item.returnRequest.processedAt = Date.now();
+
+    // If return is approved, process refund to user's wallet
+    if (status === 'approved') {
+        const user = await User.findById(order.user);
+        if (!user) {
+            res.status(404);
+            throw new Error('User not found');
+        }
+
+        // Calculate refund amount for the specific item
+        const refundAmount = item.price * item.quantity;
+
+        // Add refund to user's wallet
+        user.walletBalance = (user.walletBalance || 0) + refundAmount;
+        await user.save();
+    }
+
+    order = await order.save();
+    // Populate the user and other necessary fields before sending response
+    order = await Order.findById(order._id)
+        .populate('user', 'name email')
+        .populate('items.product', 'name price images')
+        .populate('items.variant', 'name sku')
+        .populate('shippingAddress');
+    res.json(order);
 });

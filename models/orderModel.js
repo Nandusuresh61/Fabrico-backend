@@ -31,6 +31,22 @@ const orderSchema = new mongoose.Schema({
         price: {
             type: Number,
             required: true
+        },
+        returnRequest: {
+            status: {
+                type: String,
+                enum: ['none', 'requested', 'approved', 'rejected'],
+                default: 'none'
+            },
+            reason: {
+                type: String
+            },
+            requestedAt: {
+                type: Date
+            },
+            processedAt: {
+                type: Date
+            }
         }
     }],
     shippingAddress: {
@@ -44,7 +60,7 @@ const orderSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'],
+        enum: ['pending', 'shipped', 'out for delivery', 'delivered', 'cancelled'],
         default: 'pending'
     },
     paymentMethod: {
@@ -56,19 +72,6 @@ const orderSchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'completed', 'failed', 'refunded'],
         default: 'pending'
-    },
-    returnRequest: {
-        status: {
-            type: String,
-            enum: ['none', 'requested', 'approved', 'rejected'],
-            default: 'none'
-        },
-        reason: {
-            type: String
-        },
-        requestedAt: {
-            type: Date
-        }
     },
     orderNotes: {
         type: String
@@ -87,6 +90,12 @@ const orderSchema = new mongoose.Schema({
 
 // Create index for orderId to ensure uniqueness
 orderSchema.index({ orderId: 1 }, { unique: true });
+
+// Create indexes for common search and filter operations
+orderSchema.index({ status: 1 });
+orderSchema.index({ createdAt: -1 });
+orderSchema.index({ user: 1 });
+orderSchema.index({ 'items.returnRequest.status': 1 });
 
 const Order = mongoose.model("Order", orderSchema);
 
