@@ -11,27 +11,26 @@ export const getBrands = asyncHandler(async (req, res) => {
 
     const query = {};
     
-    // Search condition
+    
     if (search) {
         query.name = { $regex: search, $options: 'i' };
     }
 
-    // Status filter
     if (status) {
         query.status = status;
     }
 
-    // Calculate skip value for pagination
+    
     const skip = (page - 1) * limit;
 
-    // Create sort object
+    
     const sortObject = {};
     sortObject[sortField] = sortOrder;
 
-    // Get total count for pagination
+    
     const total = await Brand.countDocuments(query);
 
-    // Get brands with pagination and sorting
+    
     const brands = await Brand.find(query)
         .sort(sortObject)
         .skip(skip)

@@ -3,7 +3,7 @@ import cloudinary from '../config/cloudinary.js';
 import Variant from '../models/varientModel.js';
 import Category from '../models/categoryModel.js';
 
-// ➡️ Add Product
+
 export const addProduct = async (req, res) => {
   try {
     const { name, description, category, brand, variants } = JSON.parse(req.body.data);
@@ -12,7 +12,7 @@ export const addProduct = async (req, res) => {
       return res.status(400).json({ message: 'At least 3 images are required' });
     }
 
-    // Create the product first
+   
     const product = new Product({
       name,
       description,
@@ -23,7 +23,7 @@ export const addProduct = async (req, res) => {
 
     await product.save();
 
-    // Process variants and their images
+    
     const variantPromises = variants.map(async (variant, index) => {
       // Get the images for this variant
       const variantImages = req.files.filter(file => 
@@ -168,7 +168,7 @@ export const editProduct = async (req, res) => {
   }
 };
 
-// Get all products (with search, pagination, and sorting)
+
 export const getAllProducts = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -204,7 +204,7 @@ export const getAllProducts = async (req, res) => {
     // Get total count for pagination
     const total = await Product.countDocuments(query);
 
-    // Get products with pagination and sorting
+    
     const products = await Product.find(query)
       .populate('category', 'name')
       .populate('brand', 'name')
@@ -227,7 +227,7 @@ export const getAllProducts = async (req, res) => {
   }
 };
 
-// ➡️ Toggle Product Variant Status (Active/Blocked)
+
 export const toggleProductStatus = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
@@ -256,7 +256,7 @@ export const toggleProductStatus = async (req, res) => {
   }
 };
 
-// ➡️ Toggle Product Main Status (Active/Blocked)
+
 export const toggleProductMainStatus = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -383,7 +383,7 @@ export const getAllProductsForUsers = async (req, res) => {
         sortConfig = { name: -1 };
         break;
       default:
-        sortConfig = { createdAt: -1 }; // featured/default sorting
+        sortConfig = { createdAt: -1 }; 
     }
 
     // Pagination

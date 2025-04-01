@@ -1,9 +1,7 @@
 import asyncHandler from '../middlewares/asyncHandler.js';
 import Wishlist from '../models/wishlistModel.js';
 
-// @desc    Get user's wishlist
-// @route   GET /api/wishlist
-// @access  Private
+
 const getWishlist = asyncHandler(async (req, res) => {
     let wishlist = await Wishlist.findOne({ user: req.user._id })
         .populate({
@@ -35,9 +33,7 @@ const getWishlist = asyncHandler(async (req, res) => {
     res.json(wishlist);
 });
 
-// @desc    Add item to wishlist
-// @route   POST /api/wishlist
-// @access  Private
+
 const addToWishlist = asyncHandler(async (req, res) => {
     const { productId, variantId } = req.body;
 
@@ -84,9 +80,7 @@ const addToWishlist = asyncHandler(async (req, res) => {
     res.status(201).json(wishlist);
 });
 
-// @desc    Remove item from wishlist
-// @route   DELETE /api/wishlist/:itemId
-// @access  Private
+
 const removeFromWishlist = asyncHandler(async (req, res) => {
     let wishlist = await Wishlist.findOne({ user: req.user._id });
 

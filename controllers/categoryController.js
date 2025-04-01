@@ -1,7 +1,7 @@
 import Category from "../models/categoryModel.js";
 import asyncHandler from "../middlewares/asyncHandler.js";
 
-// Add Category
+
 const addCategory = asyncHandler(async (req, res) => {
     const { name } = req.body;
 
@@ -9,7 +9,7 @@ const addCategory = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: 'Category name is required' });
     }
 
-    // Case-sensitive check for existing category
+    
     const existingCategory = await Category.findOne({ 
         name: { $regex: new RegExp(`^${name}$`, 'i') }
     });
@@ -24,7 +24,7 @@ const addCategory = asyncHandler(async (req, res) => {
     res.status(201).json({ message: 'Category added successfully', category });
 });
 
-//  Edit Category
+
 const editCategory = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { name } = req.body;
@@ -35,7 +35,7 @@ const editCategory = asyncHandler(async (req, res) => {
         return res.status(404).json({ message: 'Category not found' });
     }
 
-    // Check if the new name already exists (excluding the current category)
+    
     const existingCategory = await Category.findOne({
         _id: { $ne: id },
         name: { $regex: new RegExp(`^${name}$`, 'i') }
@@ -51,7 +51,7 @@ const editCategory = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'Category updated successfully', category });
 });
 
-//  Soft Delete Category
+
 const deleteCategory = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const category = await Category.findById(id);
@@ -66,7 +66,7 @@ const deleteCategory = asyncHandler(async (req, res) => {
     res.status(200).json({ message: `Category ${category.status === 'Activated' ? 'Deactivated' : 'Activated'} successfully.`,status: category.status });
 });
 
-//  Get All Categories 
+
 const getAllCategories = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -77,27 +77,27 @@ const getAllCategories = asyncHandler(async (req, res) => {
 
     const query = {};
     
-    // Search condition
+    
     if (search) {
         query.name = { $regex: search, $options: 'i' };
     }
 
-    // Status filter
+   
     if (status) {
         query.status = status;
     }
 
-    // Calculate skip value for pagination
+    
     const skip = (page - 1) * limit;
 
-    // Create sort object
+    
     const sortObject = {};
     sortObject[sortField] = sortOrder;
 
-    // Get total count for pagination
+    
     const total = await Category.countDocuments(query);
 
-    // Get categories with pagination and sorting
+    
     const categories = await Category.find(query)
         .sort(sortObject)
         .skip(skip)

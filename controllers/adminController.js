@@ -44,7 +44,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
         sortOrder = 'desc'
     } = req.query;
 
-    // Build filter conditions
+    
     const filterConditions = {};
     if (status.toLowerCase() !== 'all') {
         filterConditions.status = status;
@@ -57,11 +57,11 @@ const getAllUsers = asyncHandler(async (req, res) => {
         ];
     }
 
-    // Calculate total documents and pages
+    
     const totalDocs = await User.countDocuments(filterConditions);
     const totalPages = Math.ceil(totalDocs / limit);
 
-    // Get paginated and sorted results
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const users = await User.find(filterConditions)
         .select('-password')

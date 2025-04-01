@@ -1,9 +1,7 @@
 import asyncHandler from '../middlewares/asyncHandler.js';
 import Cart from '../models/cartModel.js';
 
-// @desc    Get user's cart
-// @route   GET /api/cart
-// @access  Private
+
 const getCart = asyncHandler(async (req, res) => {
     let cart = await Cart.findOne({ user: req.user._id })
         .populate({
@@ -29,9 +27,7 @@ const getCart = asyncHandler(async (req, res) => {
     res.json(cart);
 });
 
-// @desc    Add to cart
-// @route   POST /api/cart
-// @access  Private
+
 const addToCart = asyncHandler(async (req, res) => {
     const { productId, variantId, quantity = 1 } = req.body;
 
@@ -44,7 +40,7 @@ const addToCart = asyncHandler(async (req, res) => {
         });
     }
 
-    // Check if product variant already exists
+    
     const itemExists = cart.items.find(
         item => item.product.toString() === productId && 
                item.variant.toString() === variantId
@@ -62,7 +58,7 @@ const addToCart = asyncHandler(async (req, res) => {
         await cart.save();
     }
 
-    // Populate cart before sending response
+    
     cart = await Cart.findOne({ user: req.user._id })
         .populate({
             path: 'items.product',
@@ -80,9 +76,7 @@ const addToCart = asyncHandler(async (req, res) => {
     res.status(201).json(cart);
 });
 
-// @desc    Remove from cart
-// @route   DELETE /api/cart/:itemId
-// @access  Private
+
 const removeFromCart = asyncHandler(async (req, res) => {
     const { itemId } = req.params;
     
@@ -98,7 +92,7 @@ const removeFromCart = asyncHandler(async (req, res) => {
 
     await cart.save();
 
-    // Populate cart before sending response
+    
     cart = await Cart.findOne({ user: req.user._id })
         .populate({
             path: 'items.product',
@@ -116,9 +110,7 @@ const removeFromCart = asyncHandler(async (req, res) => {
     res.json(cart);
 });
 
-// @desc    Update cart item quantity
-// @route   PATCH /api/cart/:itemId
-// @access  Private
+
 const updateCartQuantity = asyncHandler(async (req, res) => {
     const { itemId } = req.params;
     const { quantity } = req.body;
@@ -142,7 +134,7 @@ const updateCartQuantity = asyncHandler(async (req, res) => {
     cartItem.quantity = quantity;
     await cart.save();
 
-    // Populate cart before sending response
+    
     cart = await Cart.findOne({ user: req.user._id })
         .populate({
             path: 'items.product',
@@ -160,9 +152,7 @@ const updateCartQuantity = asyncHandler(async (req, res) => {
     res.json(cart);
 });
 
-// @desc    Clear cart
-// @route   DELETE /api/cart
-// @access  Private
+
 const clearCart = asyncHandler(async (req, res) => {
     let cart = await Cart.findOne({ user: req.user._id });
 

@@ -3,19 +3,19 @@ import Order from '../models/orderModel.js';
 import User from '../models/userModel.js';
 import PDFDocument from 'pdfkit';
 
-// Helper function to generate order ID
+
 const generateOrderId = async () => {
-    // Get the latest order to determine the next number
+    
     const latestOrder = await Order.findOne().sort('-createdAt');
     
     let nextNumber = 1;
     if (latestOrder && latestOrder.orderId) {
-        // Extract the number from the last order ID and increment
+        
         const lastNumber = parseInt(latestOrder.orderId.split('-')[1]);
         nextNumber = lastNumber + 1;
     }
     
-    // Format the number to 5 digits with leading zeros
+    
     const formattedNumber = String(nextNumber).padStart(5, '0');
     return `ORD-${formattedNumber}`;
 };
@@ -33,7 +33,7 @@ export const createOrder = asyncHandler(async (req, res) => {
         throw new Error('No order items');
     }
 
-    // Generate unique order ID
+    
     const orderId = await generateOrderId();
 
     const order = await Order.create({
@@ -62,10 +62,10 @@ export const getOrders = asyncHandler(async (req, res) => {
     const sortBy = req.query.sortBy || 'createdAt';
     const sortOrder = req.query.sortOrder || 'desc';
 
-    // Build query
+    
     const query = {};
 
-    // Search functionality
+   
     if (search) {
         query.$or = [
             { orderId: { $regex: search, $options: 'i' } },
@@ -74,15 +74,15 @@ export const getOrders = asyncHandler(async (req, res) => {
         ];
     }
 
-    // Status filter
+ 
     if (status && status !== 'all') {
         query.status = status;
     }
 
-    // Count total documents
+    
     const total = await Order.countDocuments(query);
 
-    // Execute query with pagination and sorting
+  
     const orders = await Order.find(query)
         .populate('user', 'username email')
         .populate({
@@ -99,7 +99,7 @@ export const getOrders = asyncHandler(async (req, res) => {
         .skip((page - 1) * limit)
         .limit(limit);
 
-    // Add debug logging
+    
     console.log('Fetched orders with items:', JSON.stringify(orders, null, 2));
 
     res.json({
@@ -139,11 +139,11 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     if (order) {
         order.status = status;
         order = await order.save();
-        // Populate all necessary fields including username
+        
         order = await Order.findById(order._id)
             .populate({
                 path: 'user',
-                select: 'username email'  // Make sure we select username
+                select: 'username email'  
             })
             .populate('items.product', 'name price brand category')
             .populate('items.variant', 'name sku mainImage subImages color size')
@@ -183,7 +183,7 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
         throw new Error('Order not found');
     }
 
-    // Find the specific item in the order
+    
     const item = order.items.find(item => item._id.toString() === req.params.itemId);
 
     if (!item) {
@@ -196,11 +196,11 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
         throw new Error('No active return request found for this item');
     }
 
-    // Update return request status
+    
     item.returnRequest.status = status;
     item.returnRequest.processedAt = Date.now();
 
-    // If return is approved, process refund to user's wallet
+    
     if (status === 'approved') {
         const user = await User.findById(order.user);
         if (!user) {
@@ -208,16 +208,16 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
             throw new Error('User not found');
         }
 
-        // Calculate refund amount for the specific item
+        
         const refundAmount = item.price * item.quantity;
 
-        // Add refund to user's wallet
+        
         user.walletBalance = (user.walletBalance || 0) + refundAmount;
         await user.save();
     }
 
     order = await order.save();
-    // Populate the user and other necessary fields before sending response
+    
     order = await Order.findById(order._id)
         .populate('user', 'name email')
         .populate('items.product', 'name price brand category')
@@ -232,13 +232,13 @@ export const getUserOrders = asyncHandler(async (req, res) => {
     const sortBy = req.query.sortBy || 'createdAt';
     const sortOrder = req.query.sortOrder || 'desc';
 
-    // Build query for user's orders
+    
     const query = { user: req.user._id };
 
-    // Count total documents for this user
+   
     const total = await Order.countDocuments(query);
 
-    // Execute query with pagination and sorting
+    
     const orders = await Order.find(query)
         .populate('items.product', 'name price brand category mainImage')
         .populate('items.variant', 'name sku mainImage subImages color size')
@@ -248,8 +248,8 @@ export const getUserOrders = asyncHandler(async (req, res) => {
         .limit(limit)
         .lean();  // Convert to plain JavaScript objects
 
-    // Add debug logging
-    console.log('Fetched orders:', JSON.stringify(orders, null, 2));
+    
+    // console.log('Fetched orders:', JSON.stringify(orders, null, 2));
 
     res.json({
         orders,
@@ -272,19 +272,19 @@ export const cancelOrderForUser = asyncHandler(async (req, res) => {
         throw new Error('Order not found');
     }
 
-    // Verify the order belongs to the user
+    
     if (order.user._id.toString() !== req.user._id.toString()) {
         res.status(403);
         throw new Error('Not authorized to cancel this order');
     }
 
-    // Check if order can be cancelled
+    
     if (order.status !== 'pending' && order.status !== 'processing') {
         res.status(400);
         throw new Error('Order cannot be cancelled at this stage');
     }
 
-    // Update stock for each item
+    
     for (const item of order.items) {
         const variant = item.variant;
         if (variant) {
@@ -293,13 +293,13 @@ export const cancelOrderForUser = asyncHandler(async (req, res) => {
         }
     }
 
-    // Update order status
+    
     order.status = 'cancelled';
     order.cancellationReason = reason;
     order.cancelledAt = Date.now();
     await order.save();
 
-    // Populate the updated order
+    
     const updatedOrder = await Order.findById(order._id)
         .populate('user', 'name email')
         .populate('items.product', 'name price brand category')
@@ -321,22 +321,22 @@ export const generateInvoice = asyncHandler(async (req, res) => {
         throw new Error('Order not found');
     }
 
-    // Create a new PDF document
+   
     const doc = new PDFDocument();
     
-    // Set response headers
+    
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
     
-    // Pipe the PDF document to the response
+    
     doc.pipe(res);
 
-    // Add company header
-    doc.fontSize(20).text('Fabrico', { align: 'center' });
+    
+    doc.fontSize(20).text('FABRICO', { align: 'center' });
     doc.moveDown();
     doc.fontSize(12).text('123 Fashion Street', { align: 'center' });
     doc.text('Kannur, Kerala 670702', { align: 'center' });
-    doc.text('Phone: +91 1234567890', { align: 'center' });
+    doc.text('Phone: +91 9645760466', { align: 'center' });
     doc.text('Email: support@fabrico.com', { align: 'center' });
     doc.moveDown();
 
