@@ -84,12 +84,22 @@ export const getOrders = asyncHandler(async (req, res) => {
     // Execute query with pagination and sorting
     const orders = await Order.find(query)
         .populate('user', 'username email')
-        .populate('items.product', 'name price')
-        .populate('items.variant', 'name sku mainImage subImages')
+        .populate({
+            path: 'items.product',
+            select: 'name price',
+            populate: [
+                { path: 'brand', select: 'name' },
+                { path: 'category', select: 'name' }
+            ]
+        })
+        .populate('items.variant', 'name sku mainImage subImages color size')
         .populate('shippingAddress')
         .sort({ [sortBy]: sortOrder })
         .skip((page - 1) * limit)
         .limit(limit);
+
+    // Add debug logging
+    console.log('Fetched orders with items:', JSON.stringify(orders, null, 2));
 
     res.json({
         orders,
@@ -102,8 +112,15 @@ export const getOrders = asyncHandler(async (req, res) => {
 export const getOrderById = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id)
         .populate('user', 'name email')
-        .populate('items.product', 'name price')
-        .populate('items.variant', 'name sku mainImage subImages')
+        .populate({
+            path: 'items.product',
+            select: 'name price',
+            populate: [
+                { path: 'brand', select: 'name' },
+                { path: 'category', select: 'name' }
+            ]
+        })
+        .populate('items.variant', 'name sku mainImage subImages color size')
         .populate('shippingAddress');
 
     if (order && (order.user._id.toString() === req.user._id.toString() || req.user.isAdmin)) {
@@ -127,8 +144,8 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
                 path: 'user',
                 select: 'username email'  // Make sure we select username
             })
-            .populate('items.product', 'name price')
-            .populate('items.variant', 'name sku mainImage subImages')
+            .populate('items.product', 'name price brand category')
+            .populate('items.variant', 'name sku mainImage subImages color size')
             .populate('shippingAddress');
         res.json(order);
     } else {
@@ -202,8 +219,8 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     // Populate the user and other necessary fields before sending response
     order = await Order.findById(order._id)
         .populate('user', 'name email')
-        .populate('items.product', 'name price')
-        .populate('items.variant', 'name sku mainImage subImages')
+        .populate('items.product', 'name price brand category')
+        .populate('items.variant', 'name sku mainImage subImages color size')
         .populate('shippingAddress');
     res.json(order);
 });
@@ -222,9 +239,9 @@ export const getUserOrders = asyncHandler(async (req, res) => {
 
     // Execute query with pagination and sorting
     const orders = await Order.find(query)
-        .populate('items.product', 'name price mainImage')
-        .populate('items.variant', 'name sku mainImage subImages')
-        .populate('shippingAddress')  // Make sure we populate the shipping address
+        .populate('items.product', 'name price brand category mainImage')
+        .populate('items.variant', 'name sku mainImage subImages color size')
+        .populate('shippingAddress')
         .sort({ [sortBy]: sortOrder })
         .skip((page - 1) * limit)
         .limit(limit)
