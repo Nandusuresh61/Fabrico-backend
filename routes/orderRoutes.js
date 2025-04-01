@@ -5,7 +5,8 @@ import {
     getOrderById,
     updateOrderStatus,
     cancelOrder,
-    verifyReturnRequest
+    verifyReturnRequest,
+    getUserOrders
 } from '../controllers/orderController.js';
 import { authenticate, authorizeAdmin } from '../middlewares/authMiddleWare.js';
 
@@ -16,6 +17,9 @@ router.use(authenticate); // Protect all order routes
 router.route('/')
     .post(createOrder)
     .get(authorizeAdmin, getOrders); // Only admin can get all orders
+
+router.route('/my-orders')
+    .get(getUserOrders); // Get logged-in user's orders
 
 router.route('/:id')
     .get(getOrderById);

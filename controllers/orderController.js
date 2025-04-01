@@ -84,8 +84,8 @@ export const getOrders = asyncHandler(async (req, res) => {
     // Execute query with pagination and sorting
     const orders = await Order.find(query)
         .populate('user', 'username email')
-        .populate('items.product', 'name price images')
-        .populate('items.variant', 'name sku')
+        .populate('items.product', 'name price')
+        .populate('items.variant', 'name sku mainImage subImages')
         .populate('shippingAddress')
         .sort({ [sortBy]: sortOrder })
         .skip((page - 1) * limit)
@@ -102,8 +102,8 @@ export const getOrders = asyncHandler(async (req, res) => {
 export const getOrderById = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id)
         .populate('user', 'name email')
-        .populate('items.product')
-        .populate('items.variant')
+        .populate('items.product', 'name price')
+        .populate('items.variant', 'name sku mainImage subImages')
         .populate('shippingAddress');
 
     if (order && (order.user._id.toString() === req.user._id.toString() || req.user.isAdmin)) {
@@ -121,11 +121,14 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     if (order) {
         order.status = status;
         order = await order.save();
-        // Populate the user and other necessary fields before sending response
+        // Populate all necessary fields including username
         order = await Order.findById(order._id)
-            .populate('user', 'name email')
-            .populate('items.product', 'name price images')
-            .populate('items.variant', 'name sku')
+            .populate({
+                path: 'user',
+                select: 'username email'  // Make sure we select username
+            })
+            .populate('items.product', 'name price')
+            .populate('items.variant', 'name sku mainImage subImages')
             .populate('shippingAddress');
         res.json(order);
     } else {
@@ -199,8 +202,41 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     // Populate the user and other necessary fields before sending response
     order = await Order.findById(order._id)
         .populate('user', 'name email')
-        .populate('items.product', 'name price images')
-        .populate('items.variant', 'name sku')
+        .populate('items.product', 'name price')
+        .populate('items.variant', 'name sku mainImage subImages')
         .populate('shippingAddress');
     res.json(order);
+});
+
+export const getUserOrders = asyncHandler(async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const sortBy = req.query.sortBy || 'createdAt';
+    const sortOrder = req.query.sortOrder || 'desc';
+
+    // Build query for user's orders
+    const query = { user: req.user._id };
+
+    // Count total documents for this user
+    const total = await Order.countDocuments(query);
+
+    // Execute query with pagination and sorting
+    const orders = await Order.find(query)
+        .populate('items.product', 'name price mainImage')
+        .populate('items.variant', 'name sku mainImage subImages')
+        .populate('shippingAddress')  // Make sure we populate the shipping address
+        .sort({ [sortBy]: sortOrder })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean();  // Convert to plain JavaScript objects
+
+    // Add debug logging
+    console.log('Fetched orders:', JSON.stringify(orders, null, 2));
+
+    res.json({
+        orders,
+        page,
+        pages: Math.ceil(total / limit),
+        total
+    });
 });
