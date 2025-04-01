@@ -7,7 +7,8 @@ import {
   toggleProductMainStatus,
   getProductById,
   getAllProductsForUsers,
-  editProductName
+  editProductName,
+  updateProductStock
 } from '../controllers/productController.js';
 import { authenticate, authorizeAdmin } from '../middlewares/authMiddleWare.js';
 import upload from '../middlewares/uploadMiddleware.js';
@@ -19,6 +20,7 @@ router.post('/', authenticate, authorizeAdmin, upload.any(), addProduct);
 router.put('/:productId/variants/:variantId', authenticate, authorizeAdmin, upload.any(), editProduct);
 router.put('/:productId/variants/:variantId/toggle-status', authenticate, authorizeAdmin, toggleProductStatus);
 router.put('/:productId/toggle-status', authenticate, authorizeAdmin, toggleProductMainStatus);
+router.put('/:productId/variants/:variantId/update-stock', authenticate, updateProductStock);
 router.get('/', getAllProducts);
 router.get('/users', getAllProductsForUsers);
 router.get('/:id', getProductById);
