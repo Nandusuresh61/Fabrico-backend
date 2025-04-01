@@ -6,7 +6,8 @@ import {
     updateOrderStatus,
     cancelOrder,
     verifyReturnRequest,
-    getUserOrders
+    getUserOrders,
+    cancelOrderForUser
 } from '../controllers/orderController.js';
 import { authenticate, authorizeAdmin } from '../middlewares/authMiddleWare.js';
 
@@ -32,5 +33,7 @@ router.route('/:id/cancel')
 
 router.route('/:id/return/:itemId')
     .put(authorizeAdmin, verifyReturnRequest);
+
+router.put('/:id/cancel-user', cancelOrderForUser);
 
 export default router;

@@ -83,6 +83,12 @@ const orderSchema = new mongoose.Schema({
         url: {
             type: String
         }
+    },
+    cancellationReason: {
+        type: String
+    },
+    cancelledAt: {
+        type: Date
     }
 }, {
     timestamps: true

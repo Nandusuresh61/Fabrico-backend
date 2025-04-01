@@ -257,3 +257,53 @@ export const getUserOrders = asyncHandler(async (req, res) => {
         total
     });
 });
+
+export const cancelOrderForUser = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const order = await Order.findById(id)
+        .populate('items.variant')
+        .populate('user');
+
+    if (!order) {
+        res.status(404);
+        throw new Error('Order not found');
+    }
+
+    // Verify the order belongs to the user
+    if (order.user._id.toString() !== req.user._id.toString()) {
+        res.status(403);
+        throw new Error('Not authorized to cancel this order');
+    }
+
+    // Check if order can be cancelled
+    if (order.status !== 'pending' && order.status !== 'processing') {
+        res.status(400);
+        throw new Error('Order cannot be cancelled at this stage');
+    }
+
+    // Update stock for each item
+    for (const item of order.items) {
+        const variant = item.variant;
+        if (variant) {
+            variant.stock += item.quantity;
+            await variant.save();
+        }
+    }
+
+    // Update order status
+    order.status = 'cancelled';
+    order.cancellationReason = reason;
+    order.cancelledAt = Date.now();
+    await order.save();
+
+    // Populate the updated order
+    const updatedOrder = await Order.findById(order._id)
+        .populate('user', 'name email')
+        .populate('items.product', 'name price brand category')
+        .populate('items.variant', 'name sku mainImage subImages color size')
+        .populate('shippingAddress');
+
+    res.json(updatedOrder);
+});
