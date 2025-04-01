@@ -1,6 +1,7 @@
 import asyncHandler from '../middlewares/asyncHandler.js';
 import Order from '../models/orderModel.js';
 import User from '../models/userModel.js';
+import PDFDocument from 'pdfkit';
 
 // Helper function to generate order ID
 const generateOrderId = async () => {
@@ -306,4 +307,126 @@ export const cancelOrderForUser = asyncHandler(async (req, res) => {
         .populate('shippingAddress');
 
     res.json(updatedOrder);
+});
+
+export const generateInvoice = asyncHandler(async (req, res) => {
+    const order = await Order.findById(req.params.id)
+        .populate('user', 'username email')
+        .populate('items.product', 'name price brand category')
+        .populate('items.variant', 'name sku mainImage subImages color size')
+        .populate('shippingAddress');
+
+    if (!order) {
+        res.status(404);
+        throw new Error('Order not found');
+    }
+
+    // Create a new PDF document
+    const doc = new PDFDocument();
+    
+    // Set response headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
+    
+    // Pipe the PDF document to the response
+    doc.pipe(res);
+
+    // Add company header
+    doc.fontSize(20).text('Fabrico', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text('123 Fashion Street', { align: 'center' });
+    doc.text('Kannur, Kerala 670702', { align: 'center' });
+    doc.text('Phone: +91 1234567890', { align: 'center' });
+    doc.text('Email: support@fabrico.com', { align: 'center' });
+    doc.moveDown();
+
+    // Add invoice details
+    doc.fontSize(16).text('INVOICE', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Invoice Number: ${order.orderId}`, { align: 'right' });
+    doc.text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`, { align: 'right' });
+    doc.moveDown();
+
+    // Add customer details
+    doc.fontSize(14).text('Customer Details', { underline: true });
+    doc.fontSize(12).text(`Name: ${order.user.username}`);
+    doc.text(`Email: ${order.user.email}`);
+    doc.text(`Phone: ${order.shippingAddress.phone}`);
+    doc.moveDown();
+
+    // Add shipping address
+    doc.fontSize(14).text('Shipping Address', { underline: true });
+    doc.fontSize(12).text(order.shippingAddress.name);
+    doc.text(order.shippingAddress.street);
+    doc.text(`${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.pincode}`);
+    doc.moveDown();
+
+    // Add order items
+    doc.fontSize(14).text('Order Items', { underline: true });
+    doc.moveDown();
+
+    // Table header
+    const startX = 50;
+    let currentY = doc.y;
+    doc.text('Item', startX, currentY);
+    doc.text('Quantity', startX + 200, currentY);
+    doc.text('Price', startX + 300, currentY);
+    doc.text('Total', startX + 400, currentY);
+    doc.moveDown();
+
+    // Add items
+    order.items.forEach(item => {
+        currentY = doc.y;
+        doc.text(item.product.name, startX, currentY);
+        if (item.variant) {
+            doc.fontSize(10).text(`Variant: ${item.variant.name}`, startX, currentY + 15);
+        }
+        doc.fontSize(12).text(item.quantity.toString(), startX + 200, currentY);
+        doc.text(`₹${item.price.toFixed(2)}`, startX + 300, currentY);
+        doc.text(`₹${(item.price * item.quantity).toFixed(2)}`, startX + 400, currentY);
+        doc.moveDown();
+    });
+
+    // Add order summary
+    doc.moveDown();
+    currentY = doc.y;
+    doc.text('Subtotal:', startX + 300, currentY);
+    doc.text(`₹${(order.totalAmount - (order.shippingCost || 0) - (order.tax || 0)).toFixed(2)}`, startX + 400, currentY);
+    
+    if (order.shippingCost) {
+        currentY = doc.y;
+        doc.text('Shipping:', startX + 300, currentY);
+        doc.text(`₹${order.shippingCost.toFixed(2)}`, startX + 400, currentY);
+    }
+    
+    if (order.tax) {
+        currentY = doc.y;
+        doc.text('Tax:', startX + 300, currentY);
+        doc.text(`₹${order.tax.toFixed(2)}`, startX + 400, currentY);
+    }
+    
+    if (order.discount) {
+        currentY = doc.y;
+        doc.text('Discount:', startX + 300, currentY);
+        doc.text(`-₹${order.discount.toFixed(2)}`, startX + 400, currentY);
+    }
+    
+    currentY = doc.y;
+    doc.fontSize(14).text('Total:', startX + 300, currentY);
+    doc.text(`₹${order.totalAmount.toFixed(2)}`, startX + 400, currentY);
+
+    // Add payment details
+    doc.moveDown(2);
+    doc.fontSize(14).text('Payment Details', { underline: true });
+    doc.fontSize(12).text(`Payment Method: ${order.paymentMethod}`);
+    doc.text(`Payment Status: ${order.paymentStatus}`);
+    doc.text(`Order Status: ${order.status}`);
+
+    // Add footer
+    doc.moveDown(2);
+    doc.fontSize(10).text('Thank you for shopping with Fabrico!', { align: 'center' });
+    doc.text('This is a computer-generated invoice and does not require a signature.', { align: 'center' });
+
+    // Finalize the PDF
+    doc.end();
 });
