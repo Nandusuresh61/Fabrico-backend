@@ -94,9 +94,6 @@ const orderSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Create index for orderId to ensure uniqueness
-orderSchema.index({ orderId: 1 }, { unique: true });
-
 // Create indexes for common search and filter operations
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });

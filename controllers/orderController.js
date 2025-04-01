@@ -1,6 +1,7 @@
 import asyncHandler from '../middlewares/asyncHandler.js';
 import Order from '../models/orderModel.js';
 import User from '../models/userModel.js';
+import Payment from '../models/paymentModel.js';
 import PDFDocument from 'pdfkit';
 
 
@@ -138,6 +139,19 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
 
     if (order) {
         order.status = status;
+        
+        // If order status is delivered, update payment status to completed
+        if (status === 'delivered') {
+            order.paymentStatus = 'completed';
+            
+            // Find and update the associated payment
+            const payment = await Payment.findOne({ order: order._id });
+            if (payment) {
+                payment.paymentStatus = 'completed';
+                await payment.save();
+            }
+        }
+        
         order = await order.save();
         
         order = await Order.findById(order._id)
