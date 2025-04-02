@@ -8,7 +8,8 @@ import {
     verifyReturnRequest,
     getUserOrders,
     cancelOrderForUser,
-    generateInvoice
+    generateInvoice,
+    submitReturnRequest
 } from '../controllers/orderController.js';
 import { authenticate, authorizeAdmin } from '../middlewares/authMiddleWare.js';
 
@@ -33,7 +34,8 @@ router.route('/:id/cancel')
     .put(cancelOrder);
 
 router.route('/:id/return/:itemId')
-    .put(authorizeAdmin, verifyReturnRequest);
+    .put(authorizeAdmin, verifyReturnRequest)
+    .post(submitReturnRequest);
 
 router.put('/:id/cancel-user', cancelOrderForUser);
 

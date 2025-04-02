@@ -444,3 +444,60 @@ export const generateInvoice = asyncHandler(async (req, res) => {
     // Finalize the PDF
     doc.end();
 });
+
+export const submitReturnRequest = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { itemId } = req.params;
+    const { reason } = req.body;
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+        res.status(404);
+        throw new Error('Order not found');
+    }
+
+    // Check if user owns the order
+    if (order.user.toString() !== req.user._id.toString()) {
+        res.status(403);
+        throw new Error('Not authorized to submit return request for this order');
+    }
+
+    // Check if order is delivered
+    if (order.status !== 'delivered') {
+        res.status(400);
+        throw new Error('Return requests can only be submitted for delivered orders');
+    }
+
+    // Find the item in the order
+    const item = order.items.find(item => item._id.toString() === itemId);
+
+    if (!item) {
+        res.status(404);
+        throw new Error('Order item not found');
+    }
+
+    // Check if item already has a return request
+    if (item.returnRequest && item.returnRequest.status !== 'none') {
+        res.status(400);
+        throw new Error('Return request already exists for this item');
+    }
+
+    // Create return request
+    item.returnRequest = {
+        status: 'requested',
+        reason: reason,
+        requestedAt: Date.now()
+    };
+
+    await order.save();
+
+    // Populate the order with necessary data
+    const updatedOrder = await Order.findById(order._id)
+        .populate('user', 'name email')
+        .populate('items.product', 'name price brand category')
+        .populate('items.variant', 'name sku mainImage subImages color size')
+        .populate('shippingAddress');
+
+    res.json(updatedOrder);
+});
