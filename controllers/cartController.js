@@ -1,5 +1,6 @@
 import asyncHandler from '../middlewares/asyncHandler.js';
 import Cart from '../models/cartModel.js';
+import Variant from '../models/varientModel.js';
 
 
 const getCart = asyncHandler(async (req, res) => {
@@ -40,11 +41,27 @@ const addToCart = asyncHandler(async (req, res) => {
         });
     }
 
-    
+    // Get the variant to check stock
+    const variant = await Variant.findById(variantId);
+    if (!variant) {
+        return res.status(404).json({ message: 'Variant not found' });
+    }
+
+    // Check if item exists in cart
     const itemExists = cart.items.find(
         item => item.product.toString() === productId && 
                item.variant.toString() === variantId
     );
+
+    // Calculate total quantity after adding
+    const newQuantity = itemExists ? itemExists.quantity + quantity : quantity;
+
+    // Check if new quantity exceeds stock
+    if (newQuantity > variant.stock) {
+        return res.status(400).json({ 
+            message: `Cannot add ${quantity} more items. Only ${variant.stock - (itemExists ? itemExists.quantity : 0)} items available in stock.` 
+        });
+    }
 
     if (itemExists) {
         itemExists.quantity += quantity;
