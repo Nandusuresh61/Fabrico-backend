@@ -3,6 +3,7 @@ import Order from '../models/orderModel.js';
 import User from '../models/userModel.js';
 import Payment from '../models/paymentModel.js';
 import PDFDocument from 'pdfkit';
+import Wallet from '../models/walletModel.js';
 
 
 const generateOrderId = async () => {
@@ -197,7 +198,6 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
         throw new Error('Order not found');
     }
 
-    
     const item = order.items.find(item => item._id.toString() === req.params.itemId);
 
     if (!item) {
@@ -210,11 +210,9 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
         throw new Error('No active return request found for this item');
     }
 
-    
     item.returnRequest.status = status;
     item.returnRequest.processedAt = Date.now();
 
-    
     if (status === 'approved') {
         const user = await User.findById(order.user);
         if (!user) {
@@ -222,12 +220,30 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
             throw new Error('User not found');
         }
 
-        
+        // Calculate refund amount
         const refundAmount = item.price * item.quantity;
 
-        
-        user.walletBalance = (user.walletBalance || 0) + refundAmount;
-        await user.save();
+        // Find or create user's wallet
+        let wallet = await Wallet.findOne({ userId: user._id });
+        if (!wallet) {
+            wallet = await Wallet.create({
+                userId: user._id,
+                balance: 0,
+                currency: 'INR'
+            });
+        }
+
+        // Add transaction to wallet
+        const transaction = {
+            id: `TRX-${Date.now()}`,
+            type: 'credit',
+            amount: refundAmount,
+            description: `Refund for Order ${order.orderId} - ${item.product.name}`,
+            orderId: order.orderId,
+            status: 'completed'
+        };
+
+        await wallet.addTransaction(transaction);
     }
 
     order = await order.save();

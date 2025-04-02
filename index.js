@@ -11,7 +11,7 @@ import addressRoutes from './routes/addressRoutes.js'
 import wishlistRoutes from './routes/wishlistRoutes.js'
 import cartRoutes from './routes/cartRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
-
+import walletRoutes from './routes/walletRoutes.js'
 
 dotenv.config();
 import connectDB from './config/db.js';
@@ -50,5 +50,5 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/cart', cartRoutes);
 
 app.use('/api/orders', orderRoutes);
-   
+app.use('/api/wallet', walletRoutes);
 app.listen(port, (console.log(`server is running on port ${port}`)))

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const transactionSchema = new mongoose.Schema({
   id: {
@@ -95,4 +95,4 @@ walletSchema.methods.getRecentTransactions = function(limit = 5) {
 
 const Wallet = mongoose.model('Wallet', walletSchema);
 
-module.exports = Wallet;
+export default Wallet;
