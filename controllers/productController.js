@@ -86,7 +86,7 @@ export const addProduct = async (req, res) => {
   }
 };
 
-// ➡️ Edit Product Variant
+
 export const editProduct = async (req, res) => {
   try {
     const { productId, variantId } = req.params;

@@ -1,16 +1,18 @@
 import asyncHandler from '../middlewares/asyncHandler.js';
 import Cart from '../models/cartModel.js';
 import Variant from '../models/varientModel.js';
+import Product from '../models/productModel.js';
+import Category from '../models/categoryModel.js';
 
 
 const getCart = asyncHandler(async (req, res) => {
     let cart = await Cart.findOne({ user: req.user._id })
         .populate({
             path: 'items.product',
-            select: 'name brand category',
+            select: 'name brand category status',
             populate: [
                 { path: 'brand', select: 'name' },
-                { path: 'category', select: 'name' }
+                { path: 'category', select: 'name status' }
             ]
         })
         .populate({
@@ -25,12 +27,46 @@ const getCart = asyncHandler(async (req, res) => {
         });
     }
 
+    // Filter blcocked/ unavailabl e items
+    cart.items = cart.items.filter(
+        item => item.product.status === 'active' && !item.variant.isBlocked &&
+               item.product.category.status !== 'blocked'
+    );
+
+    // Recalculate total
+    cart.totalAmount = cart.items.reduce(
+        (total,item) => {
+            const price = item.variant.discountPrice || item.variant.price;
+            return total + (price * item.quantity);
+        },0);
+
+    await cart.save();
+
     res.json(cart);
 });
 
 
 const addToCart = asyncHandler(async (req, res) => {
     const { productId, variantId, quantity = 1 } = req.body;
+
+    //checking if exists and is active
+
+    const product = await Product.findById(productId)
+    .populate("category");
+    if(!product){
+        return res.status(404).json({ message : "Product not found"});
+    }
+
+    if(product.status !== 'active'){
+        return res.status(400).json({ message : "This product is currently unavailable"});
+    }
+
+    //check the varient exist and is not blocked
+    const variant = await Variant.findById(variantId);
+    if(!variant || variant.isBlocked){
+        return res.status(400).json({message : "This Product Variant is currently unavailable"});
+    }
+
 
     let cart = await Cart.findOne({ user: req.user._id });
 
@@ -42,10 +78,10 @@ const addToCart = asyncHandler(async (req, res) => {
     }
 
     // Get the variant to check stock
-    const variant = await Variant.findById(variantId);
-    if (!variant) {
-        return res.status(404).json({ message: 'Variant not found' });
-    }
+    // const variant = await Variant.findById(variantId);
+    // if (!variant) {
+    //     return res.status(404).json({ message: 'Variant not found' });
+    // }
 
     // Check if item exists in cart
     const itemExists = cart.items.find(
@@ -79,16 +115,24 @@ const addToCart = asyncHandler(async (req, res) => {
     cart = await Cart.findOne({ user: req.user._id })
         .populate({
             path: 'items.product',
-            select: 'name brand category',
+            select: 'name brand category status',
             populate: [
                 { path: 'brand', select: 'name' },
-                { path: 'category', select: 'name' }
+                { path: 'category', select: 'name status' }
             ]
         })
         .populate({
             path: 'items.variant',
             select: 'color price discountPrice mainImage stock'
         });
+
+    // Recalculate total
+    cart.totalAmount = cart.items.reduce((total, item) => {
+        const price = item.variant.discountPrice || item.variant.price;
+        return total + (price * item.quantity);
+    }, 0);
+
+    await cart.save();
 
     res.status(201).json(cart);
 });
