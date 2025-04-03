@@ -4,6 +4,7 @@ import User from '../models/userModel.js';
 import Payment from '../models/paymentModel.js';
 import PDFDocument from 'pdfkit';
 import Wallet from '../models/walletModel.js';
+import Address from '../models/addressModel.js';
 
 
 const generateOrderId = async () => {
@@ -35,6 +36,37 @@ export const createOrder = asyncHandler(async (req, res) => {
         throw new Error('No order items');
     }
 
+    let addressDetails;
+    
+    // Check if shippingAddress is an ID or an object with address details
+    if (typeof shippingAddress === 'string') {
+        // If it's an ID, fetch the address from the database
+        const address = await Address.findById(shippingAddress);
+        if (!address) {
+            res.status(400);
+            throw new Error('Shipping address not found');
+        }
+        addressDetails = {
+            name: address.name,
+            street: address.street,
+            city: address.city,
+            state: address.state,
+            pincode: address.pincode,
+            phone: address.phone
+        };
+    } else if (typeof shippingAddress === 'object') {
+        // If it's an object, validate the required fields
+        if (!shippingAddress.name || !shippingAddress.street || 
+            !shippingAddress.city || !shippingAddress.state || 
+            !shippingAddress.pincode || !shippingAddress.phone) {
+            res.status(400);
+            throw new Error('Invalid shipping address: Missing required fields');
+        }
+        addressDetails = shippingAddress;
+    } else {
+        res.status(400);
+        throw new Error('Invalid shipping address format');
+    }
     
     const orderId = await generateOrderId();
 
@@ -42,7 +74,7 @@ export const createOrder = asyncHandler(async (req, res) => {
         orderId,
         user: req.user._id,
         items,
-        shippingAddress,
+        shippingAddress: addressDetails,
         paymentMethod,
         totalAmount,
     });
@@ -96,7 +128,6 @@ export const getOrders = asyncHandler(async (req, res) => {
             ]
         })
         .populate('items.variant', 'name sku mainImage subImages color size')
-        .populate('shippingAddress')
         .sort({ [sortBy]: sortOrder })
         .skip((page - 1) * limit)
         .limit(limit);
@@ -123,8 +154,7 @@ export const getOrderById = asyncHandler(async (req, res) => {
                 { path: 'category', select: 'name' }
             ]
         })
-        .populate('items.variant', 'name sku mainImage subImages color size')
-        .populate('shippingAddress');
+        .populate('items.variant', 'name sku mainImage subImages color size');
 
     if (order && (order.user._id.toString() === req.user._id.toString() || req.user.isAdmin)) {
         res.json(order);
