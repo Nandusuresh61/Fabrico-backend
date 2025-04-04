@@ -133,7 +133,7 @@ export const getOrders = asyncHandler(async (req, res) => {
         .limit(limit);
 
     
-    console.log('Fetched orders with items:', JSON.stringify(orders, null, 2));
+    // console.log('Fetched orders with items:', JSON.stringify(orders, null, 2));
 
     res.json({
         orders,
