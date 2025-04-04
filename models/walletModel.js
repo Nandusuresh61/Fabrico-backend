@@ -27,7 +27,7 @@ const transactionSchema = new mongoose.Schema({
   },
   orderId: {
     type: String,
-    // Optional since not all transactions are related to orders
+    
   },
   status: {
     type: String,
