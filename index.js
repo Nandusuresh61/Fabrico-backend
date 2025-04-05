@@ -12,6 +12,7 @@ import wishlistRoutes from './routes/wishlistRoutes.js'
 import cartRoutes from './routes/cartRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
 import walletRoutes from './routes/walletRoutes.js'
+import morgan from 'morgan';
 
 dotenv.config();
 import connectDB from './config/db.js';
@@ -23,6 +24,7 @@ const port = process.env.PORT || 5000;
 
 
 const app = express();
+app.use(morgan('dev')); // dev = Method, status, responsetime
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true,
