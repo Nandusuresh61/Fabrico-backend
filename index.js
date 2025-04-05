@@ -12,6 +12,7 @@ import wishlistRoutes from './routes/wishlistRoutes.js'
 import cartRoutes from './routes/cartRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
 import walletRoutes from './routes/walletRoutes.js'
+import csrfProtection from './middlewares/csrfMiddleware.js';
 import morgan from 'morgan';
 
 dotenv.config();
@@ -39,6 +40,14 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
+
+
+app.use('/api', csrfProtection);
 
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
