@@ -8,10 +8,21 @@ export const addProduct = async (req, res) => {
   try {
     const { name, description, category, brand, variants } = JSON.parse(req.body.data);
 
-    if (!req.files || req.files.length < 3) {
-      return res.status(400).json({ message: 'At least 3 images are required' });
+    // Validate required fields
+    if (!name || !description || !category || !brand || !variants || !Array.isArray(variants) || variants.length === 0) {
+      return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    // Check if files are provided
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'At least one image is required' });
+    }
+
+    // Count total images needed (3 per variant)
+    const totalImagesNeeded = variants.length * 3;
+    if (req.files.length < totalImagesNeeded) {
+      return res.status(400).json({ message: `At least ${totalImagesNeeded} images are required (3 per variant)` });
+    }
    
     const product = new Product({
       name,
@@ -91,7 +102,15 @@ export const editProduct = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
     const { color, price, stock, discountPrice } = req.body;
-    const existingImages = JSON.parse(req.body.existingImages || '[]');
+    
+    // Parse existing images with error handling
+    let existingImages = [];
+    try {
+      existingImages = JSON.parse(req.body.existingImages || '[]');
+    } catch (error) {
+      console.error('Error parsing existingImages:', error);
+      existingImages = [];
+    }
 
     // Find the product and variant
     const product = await Product.findById(productId);
@@ -105,7 +124,7 @@ export const editProduct = async (req, res) => {
     }
 
     // Get current images that need to be deleted
-    const currentImages = [variant.mainImage, ...variant.subImages];
+    const currentImages = [variant.mainImage, ...variant.subImages].filter(Boolean);
     const imagesToDelete = currentImages.filter(img => !existingImages.includes(img));
 
     // Delete removed images from Cloudinary
@@ -113,8 +132,13 @@ export const editProduct = async (req, res) => {
       await Promise.all(
         imagesToDelete.map(async (url) => {
           if (url) {
-            const publicId = url.split('/').pop().split('.')[0];
-            await cloudinary.uploader.destroy(`products/${publicId}`);
+            try {
+              const publicId = url.split('/').pop().split('.')[0];
+              await cloudinary.uploader.destroy(`products/${publicId}`);
+            } catch (error) {
+              console.error('Error deleting image from Cloudinary:', error);
+              // Continue with other deletions even if one fails
+            }
           }
         })
       );
@@ -164,6 +188,7 @@ export const editProduct = async (req, res) => {
       variant 
     });
   } catch (error) {
+    console.error('Error in editProduct:', error);
     res.status(500).json({ message: error.message });
   }
 };
