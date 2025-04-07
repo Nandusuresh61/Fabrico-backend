@@ -103,9 +103,22 @@ export const getOrders = asyncHandler(async (req, res) => {
     if (search) {
         query.$or = [
             { orderId: { $regex: search, $options: 'i' } },
-            { 'user.name': { $regex: search, $options: 'i' } },
-            { 'user.email': { $regex: search, $options: 'i' } }
+            
         ];
+    }
+    if (search) {
+        const users = await User.find({
+            $or: [
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ]
+        });
+        
+        // Add user IDs to the query
+        if (users.length > 0) {
+            query.$or = query.$or || [];
+            query.$or.push({ user: { $in: users.map(user => user._id) } });
+        }
     }
 
  
