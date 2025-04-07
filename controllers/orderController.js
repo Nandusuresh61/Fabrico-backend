@@ -289,27 +289,37 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
 export const getUserOrders = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const status = req.query.status || '';
     const sortBy = req.query.sortBy || 'createdAt';
     const sortOrder = req.query.sortOrder || 'desc';
 
-    
     const query = { user: req.user._id };
 
-   
+    // Add search functionality
+    if (search) {
+        query.$or = [
+            { orderId: { $regex: search, $options: 'i' } },
+            { 'shippingAddress.name': { $regex: search, $options: 'i' } },
+            { 'shippingAddress.phone': { $regex: search, $options: 'i' } }
+        ];
+    }
+
+    // Add status filter
+    if (status) {
+        query.status = status;
+    }
+
     const total = await Order.countDocuments(query);
 
-    
     const orders = await Order.find(query)
         .populate('items.product', 'name price brand category mainImage')
         .populate('items.variant', 'name sku mainImage subImages color size')
         .populate('shippingAddress')
-        .sort({ [sortBy]: sortOrder })
+        .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
         .skip((page - 1) * limit)
         .limit(limit)
-        .lean();  // Convert to plain JavaScript objects
-
-    
-    // console.log('Fetched orders:', JSON.stringify(orders, null, 2));
+        .lean();
 
     res.json({
         orders,
