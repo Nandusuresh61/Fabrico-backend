@@ -26,16 +26,16 @@ const port = process.env.PORT || 5000;
 
 
 const app = express();
-app.use(morgan('dev')); // dev = Method, status, responsetime
+app.use(morgan('dev'));
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: process.env.FRONTEND_BASE_URL,
   credentials: true,
 }));
 app.use(helmet());
 
 app.use((req, res, next) => {
-  res.removeHeader("Cross-Origin-Opener-Policy"); // Remove COOP
-  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups"); // Allow popups
+  res.removeHeader("Cross-Origin-Opener-Policy"); 
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups"); 
   next();
 });
 
