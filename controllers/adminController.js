@@ -11,6 +11,9 @@ const loginAdmin = asyncHandler(async (req, res) => {
     if (!user) {
         return res.status(401).json({ message: 'Invalid email or password.' });
     }
+    if (!user.isAdmin) {
+        return res.status(403).json({ message: 'Access denied. Not an admin user.' });
+    }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
