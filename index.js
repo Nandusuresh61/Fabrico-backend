@@ -34,8 +34,8 @@ app.use(cors({
 app.use(helmet());
 
 app.use((req, res, next) => {
-  res.removeHeader("Cross-Origin-Opener-Policy"); 
-  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups"); 
+  res.removeHeader("Cross-Origin-Opener-Policy");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   next();
 });
 
