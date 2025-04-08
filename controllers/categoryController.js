@@ -1,12 +1,13 @@
 import Category from "../models/categoryModel.js";
 import asyncHandler from "../middlewares/asyncHandler.js";
+import { HTTP_STATUS } from "../utils/httpStatus.js";
 
 
 const addCategory = asyncHandler(async (req, res) => {
     const { name } = req.body;
 
     if (!name) {
-        return res.status(400).json({ message: 'Category name is required' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name is required' });
     }
 
     
@@ -15,13 +16,13 @@ const addCategory = asyncHandler(async (req, res) => {
     });
     
     if (existingCategory) {
-        return res.status(400).json({ message: 'Category name already exists' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name already exists' });
     }
 
     const category = new Category({ name });
     await category.save();
 
-    res.status(201).json({ message: 'Category added successfully', category });
+    res.status(HTTP_STATUS.CREATED).json({ message: 'Category added successfully', category });
 });
 
 
@@ -32,7 +33,7 @@ const editCategory = asyncHandler(async (req, res) => {
     const category = await Category.findById(id);
 
     if (!category) {
-        return res.status(404).json({ message: 'Category not found' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category not found' });
     }
 
     
@@ -42,13 +43,13 @@ const editCategory = asyncHandler(async (req, res) => {
     });
 
     if (existingCategory) {
-        return res.status(400).json({ message: 'Category name already exists' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name already exists' });
     }
 
     category.name = name || category.name;
     await category.save();
 
-    res.status(200).json({ message: 'Category updated successfully', category });
+    res.status(HTTP_STATUS.OK).json({ message: 'Category updated successfully', category });
 });
 
 
@@ -57,13 +58,13 @@ const deleteCategory = asyncHandler(async (req, res) => {
     const category = await Category.findById(id);
 
     if (!category) {
-        return res.status(404).json({ message: 'category not found' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'category not found' });
     }
 
     category.status = category.status === 'Activated' ? 'Deactivated' : 'Activated';
     await category.save();
 
-    res.status(200).json({ message: `Category ${category.status === 'Activated' ? 'Deactivated' : 'Activated'} successfully.`,status: category.status });
+    res.status(HTTP_STATUS.OK).json({ message: `Category ${category.status === 'Activated' ? 'Deactivated' : 'Activated'} successfully.`,status: category.status });
 });
 
 

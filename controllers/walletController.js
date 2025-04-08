@@ -1,5 +1,6 @@
 import asyncHandler from '../middlewares/asyncHandler.js';
 import Wallet from '../models/walletModel.js';
+import { HTTP_STATUS } from '../utils/httpStatus.js';
 
 export const getWallet = asyncHandler(async (req, res) => {
     const wallet = await Wallet.findOne({ userId: req.user._id });

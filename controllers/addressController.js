@@ -1,5 +1,6 @@
 import Address from '../models/addressModel.js';
 import asyncHandler from 'express-async-handler';
+import { HTTP_STATUS } from '../utils/httpStatus.js';
 
 
 export const getAllAddresses = asyncHandler(async (req, res) => {
@@ -31,7 +32,7 @@ export const addAddress = asyncHandler(async (req, res) => {
     isDefault
   });
 
-  res.status(201).json(address);
+  res.status(HTTP_STATUS.CREATED).json(address);
 });
 
 
@@ -42,7 +43,7 @@ export const editAddress = asyncHandler(async (req, res) => {
   });
 
   if (!address) {
-    res.status(404);
+    res.status(HTTP_STATUS.NOT_FONUD);
     throw new Error('Address not found');
   }
 
@@ -70,7 +71,7 @@ export const deleteAddress = asyncHandler(async (req, res) => {
   });
 
   if (!address) {
-    res.status(404);
+    res.status(HTTP_STATUS.NOT_FONUD);
     throw new Error('Address not found');
   }
 
@@ -95,7 +96,7 @@ export const setDefaultAddress = asyncHandler(async (req, res) => {
   );
 
   if (!address) {
-    res.status(404);
+    res.status(HTTP_STATUS.NOT_FONUD);
     throw new Error('Address not found');
   }
 

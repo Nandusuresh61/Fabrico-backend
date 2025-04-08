@@ -5,6 +5,7 @@ import Payment from '../models/paymentModel.js';
 import PDFDocument from 'pdfkit';
 import Wallet from '../models/walletModel.js';
 import Address from '../models/addressModel.js';
+import { HTTP_STATUS } from '../utils/httpStatus.js';
 
 
 const generateOrderId = async () => {
@@ -32,7 +33,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     } = req.body;
 
     if (!items || items.length === 0) {
-        res.status(400);
+        res.status(HTTP_STATUS.BAD_REQUEST);
         throw new Error('No order items');
     }
 
@@ -43,7 +44,7 @@ export const createOrder = asyncHandler(async (req, res) => {
         // If it's an ID, fetch the address from the database
         const address = await Address.findById(shippingAddress);
         if (!address) {
-            res.status(400);
+            res.status(HTTP_STATUS.BAD_REQUEST);
             throw new Error('Shipping address not found');
         }
         addressDetails = {
@@ -59,12 +60,12 @@ export const createOrder = asyncHandler(async (req, res) => {
         if (!shippingAddress.name || !shippingAddress.street || 
             !shippingAddress.city || !shippingAddress.state || 
             !shippingAddress.pincode || !shippingAddress.phone) {
-            res.status(400);
+            res.status(HTTP_STATUS.BAD_REQUEST);
             throw new Error('Invalid shipping address: Missing required fields');
         }
         addressDetails = shippingAddress;
     } else {
-        res.status(400);
+        res.status(HTTP_STATUS.BAD_REQUEST);
         throw new Error('Invalid shipping address format');
     }
     
@@ -80,9 +81,9 @@ export const createOrder = asyncHandler(async (req, res) => {
     });
 
     if (order) {
-        res.status(201).json(order);
+        res.status(HTTP_STATUS.CREATED).json(order);
     } else {
-        res.status(400);
+        res.status(HTTP_STATUS.BAD_REQUEST);
         throw new Error('Invalid order data');
     }
 });
@@ -172,7 +173,7 @@ export const getOrderById = asyncHandler(async (req, res) => {
     if (order && (order.user._id.toString() === req.user._id.toString() || req.user.isAdmin)) {
         res.json(order);
     } else {
-        res.status(404);
+        res.status(HTTP_STATUS.NOT_FOUND);
         throw new Error('Order not found');
     }
 });
@@ -208,7 +209,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
             .populate('shippingAddress');
         res.json(order);
     } else {
-        res.status(404);
+        res.status(HTTP_STATUS.NOT_FOUND);
         throw new Error('Order not found');
     }
 });
@@ -222,11 +223,11 @@ export const cancelOrder = asyncHandler(async (req, res) => {
             const updatedOrder = await order.save();
             res.json(updatedOrder);
         } else {
-            res.status(400);
+            res.status(HTTP_STATUS.BAD_REQUEST);
             throw new Error('Order cannot be cancelled');
         }
     } else {
-        res.status(404);
+        res.status(HTTP_STATUS.NOT_FOUND);
         throw new Error('Order not found');
     }
 });
@@ -237,19 +238,19 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     let order = await Order.findById(req.params.id);
 
     if (!order) {
-        res.status(404);
+        res.status(HTTP_STATUS.NOT_FOUND);
         throw new Error('Order not found');
     }
 
     const item = order.items.find(item => item._id.toString() === req.params.itemId);
 
     if (!item) {
-        res.status(404);
+        res.status(HTTP_STATUS.NOT_FOUND);
         throw new Error('Order item not found');
     }
 
     if (!item.returnRequest || item.returnRequest.status !== 'requested') {
-        res.status(400);
+        res.status(HTTP_STATUS.BAD_REQUEST);
         throw new Error('No active return request found for this item');
     }
 
@@ -259,7 +260,7 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     if (status === 'approved') {
         const user = await User.findById(order.user);
         if (!user) {
-            res.status(404);
+            res.status(HTTP_STATUS.NOT_FOUND);
             throw new Error('User not found');
         }
 
@@ -351,19 +352,19 @@ export const cancelOrderForUser = asyncHandler(async (req, res) => {
         .populate('user');
 
     if (!order) {
-        res.status(404);
+        res.status(HTTP_STATUS.NOT_FOUND);
         throw new Error('Order not found');
     }
 
     
     if (order.user._id.toString() !== req.user._id.toString()) {
-        res.status(403);
+        res.status(HTTP_STATUS.FORBIDDEN);
         throw new Error('Not authorized to cancel this order');
     }
 
     
     if (order.status !== 'pending' && order.status !== 'processing') {
-        res.status(400);
+        res.status(HTTP_STATUS.BAD_REQUEST);
         throw new Error('Order cannot be cancelled at this stage');
     }
 
@@ -400,7 +401,7 @@ export const generateInvoice = asyncHandler(async (req, res) => {
         .populate('shippingAddress');
 
     if (!order) {
-        res.status(404);
+        res.status(HTTP_STATUS.NOT_FOUND);
         throw new Error('Order not found');
     }
 
@@ -522,19 +523,19 @@ export const submitReturnRequest = asyncHandler(async (req, res) => {
     const order = await Order.findById(id);
 
     if (!order) {
-        res.status(404);
+        res.status(HTTP_STATUS.NOT_FOUND);
         throw new Error('Order not found');
     }
 
     // Check if user owns the order
     if (order.user.toString() !== req.user._id.toString()) {
-        res.status(403);
+        res.status(HTTP_STATUS.FORBIDDEN);
         throw new Error('Not authorized to submit return request for this order');
     }
 
     // Check if order is delivered
     if (order.status !== 'delivered') {
-        res.status(400);
+        res.status(HTTP_STATUS.BAD_REQUEST);
         throw new Error('Return requests can only be submitted for delivered orders');
     }
 
@@ -548,7 +549,7 @@ export const submitReturnRequest = asyncHandler(async (req, res) => {
 
     // Check if item already has a return request
     if (item.returnRequest && item.returnRequest.status !== 'none') {
-        res.status(400);
+        res.status(HTTP_STATUS.BAD_REQUEST);
         throw new Error('Return request already exists for this item');
     }
 

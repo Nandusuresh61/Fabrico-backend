@@ -5,18 +5,19 @@ import bcrypt from 'bcryptjs';
 import nodemailer from 'nodemailer';
 import { oauth2Client } from "../utils/googleConfig.js";
 import axios from "axios";
+import { HTTP_STATUS } from '../utils/httpStatus.js';
 
 // Create a new user
 const createUser = asyncHandler(async (req, res) => {
     const { username, email, phone, password, profileImage } = req.body;
 
     if (!username || !email || !password || !phone) {
-        return res.status(400).json({ message: 'Please fill all required fields.' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Please fill all required fields.' });
     }
 
     const userExists = await User.findOne({ email });
     if (userExists && userExists.isVerified) {
-        return res.status(400).json({ message: 'User already exists.' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'User already exists.' });
     }
 
     // Generate OTP - 6 digit number
@@ -49,7 +50,7 @@ const createUser = asyncHandler(async (req, res) => {
     // Send OTP via email
     await sendOtpEmail(email, otp);
 
-    res.status(201).json({
+    res.status(HTTP_STATUS.OK).json({
         message: 'User registered successfully. Please verify your email.',
         _id: newUser._id,
         username: newUser.username,
@@ -104,21 +105,21 @@ const verifyOtp = asyncHandler(async (req, res) => {
     console.log(email, otp)
 
     if (!email || !otp) {
-        return res.status(400).json({ message: 'Email and OTP are required.' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Email and OTP are required.' });
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-        return res.status(404).json({ message: 'User not found.' });
+        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'User not found.' });
     }
 
     // Check if OTP is correct and not expired
     if (user.otp !== otp) {
-        return res.status(400).json({ message: 'Invalid OTP.' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Invalid OTP.' });
     }
 
     if (new Date() > user.otpExpiry) {
-        return res.status(400).json({ message: 'OTP has expired.' });
+        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'OTP has expired.' });
     }
 
     // Verify user and clear OTP fields
@@ -127,7 +128,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
     user.otpExpiry = undefined;
     await user.save();
 
-    res.status(200).json({ message: 'Email verified successfully.' });
+    res.status(HTTP_STATUS.OK).json({ message: 'Email verified successfully.' });
 });
 
 // Resend OTP
@@ -135,16 +136,16 @@ const resendOtp = asyncHandler(async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
-        return res.status(400).json({ message: 'Email is required.' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Email is required.' });
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-        return res.status(404).json({ message: 'User not found.' });
+        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'User not found.' });
     }
 
     if (user.isVerified) {
-        return res.status(400).json({ message: 'Email is already verified.' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Email is already verified.' });
     }
 
     // Generate new OTP
@@ -160,7 +161,7 @@ const resendOtp = asyncHandler(async (req, res) => {
     // Send new OTP via email
     await sendOtpEmail(email, otp);
 
-    res.status(200).json({ message: 'OTP resent successfully.' });
+    res.status(HTTP_STATUS.OK).json({ message: 'OTP resent successfully.' });
 });
 
 // User Login - Updated to check verification status
@@ -169,12 +170,12 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-        return res.status(401).json({ message: 'Invalid email or password.' });
+        return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: 'Invalid email or password.' });
     }
 
     // Check if user is blocked
     if (user.status === 'blocked') {
-        return res.status(403).json({ 
+        return res.status(HTTP_STATUS.FORBIDDEN).json({ 
             message: 'Your account has been blocked. Please contact support.',
             isBlocked: true
         });
@@ -191,12 +192,12 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-        return res.status(401).json({ message: 'Invalid email or password.' });
+        return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: 'Invalid email or password.' });
     }
 
     generateToken(res, user._id);
 
-    res.status(200).json({
+    res.status(HTTP_STATUS.OK).json({
         _id: user._id,
         username: user.username,
         email: user.email,
@@ -209,7 +210,7 @@ const loginUser = asyncHandler(async (req, res) => {
 // Logout User
 const logoutUser = asyncHandler(async (req, res) => {
     res.cookie('jwt', '', { httpOnly: true, expires: new Date(0) });
-    res.status(200).json({ message: 'Logged out successfully' });
+    res.status(HTTP_STATUS.OK).json({ message: 'Logged out successfully' });
 });
 
 // Send forgot password OTP
@@ -218,7 +219,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-        return res.status(404).json({ message: 'User not found with this email.' });
+        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'User not found with this email.' });
     }
 
     // Generate OTP
@@ -234,7 +235,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
     // Send OTP via email
     await sendOtpEmail(email, otp, 'Password Reset');
 
-    res.status(200).json({ message: 'Password reset OTP sent successfully.' });
+    res.status(HTTP_STATUS.OK).json({ message: 'Password reset OTP sent successfully.' });
 });
 
 // Verify forgot password OTP
@@ -248,7 +249,7 @@ const verifyForgotOtp = asyncHandler(async (req, res) => {
     });
 
     if (!user) {
-        return res.status(400).json({ message: 'Invalid or expired OTP.' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Invalid or expired OTP.' });
     }
 
     // Clear OTP fields
@@ -256,7 +257,7 @@ const verifyForgotOtp = asyncHandler(async (req, res) => {
     user.resetPasswordOtpExpiry = undefined;
     await user.save();
 
-    res.status(200).json({ message: 'OTP verified successfully.' });
+    res.status(HTTP_STATUS.OK).json({ message: 'OTP verified successfully.' });
 });
 
 // Resend forgot password OTP
@@ -265,7 +266,7 @@ const resendForgotOtp = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-        return res.status(404).json({ message: 'User not found.' });
+        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'User not found.' });
     }
 
     // Generate new OTP
@@ -281,7 +282,7 @@ const resendForgotOtp = asyncHandler(async (req, res) => {
     // Send new OTP via email
     await sendOtpEmail(email, otp, 'Password Reset');
 
-    res.status(200).json({ message: 'OTP resent successfully.' });
+    res.status(HTTP_STATUS.OK).json({ message: 'OTP resent successfully.' });
 });
 
 // Reset password
@@ -290,7 +291,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-        return res.status(404).json({ message: 'User not found.' });
+        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'User not found.' });
     }
 
     // Hash new password
@@ -301,7 +302,7 @@ const resetPassword = asyncHandler(async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    res.status(200).json({ message: 'Password reset successful.' });
+    res.status(HTTP_STATUS.OK).json({ message: 'Password reset successful.' });
 });
 
 // Change password
@@ -311,13 +312,13 @@ const changePassword = asyncHandler(async (req, res) => {
 
     const user = await User.findById(userId);
     if (!user) {
-        return res.status(404).json({ message: 'User not found.' });
+        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'User not found.' });
     }
 
     // Verify current password
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isPasswordValid) {
-        return res.status(401).json({ message: 'Current password is incorrect.' });
+        return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: 'Current password is incorrect.' });
     }
 
     // Hash new password
@@ -328,7 +329,7 @@ const changePassword = asyncHandler(async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    res.status(200).json({ message: 'Password changed successfully.' });
+    res.status(HTTP_STATUS.OK).json({ message: 'Password changed successfully.' });
 });
 
 export const googleAuthController = asyncHandler(async (req, res) => {
@@ -368,7 +369,7 @@ export const googleAuthController = asyncHandler(async (req, res) => {
         }
 
         if(user.status=='blocked') {
-            return res.status(403).json({
+            return res.status(HTTP_STATUS.FORBIDDEN).json({
                 message: "You're blocked. Contact Support team",
                 isBlocked: true
             });
@@ -376,14 +377,14 @@ export const googleAuthController = asyncHandler(async (req, res) => {
 
         generateToken(res, user._id);
 
-        res.status(200).json({
+        res.status(HTTP_STATUS.OK).json({
             _id: user._id,
             username: user.username,
             email: user.email,
         });
     } catch (error) {
         console.error('Google Auth Error:', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             message: error.message || 'Failed to authenticate with Google',
             details: error.code === 'ETIMEDOUT' ? 'Connection timed out. Please try again.' : undefined
         });
@@ -398,7 +399,7 @@ const sendEmailUpdateOtp = asyncHandler(async (req, res) => {
     // Check if email already exists
     const emailExists = await User.findOne({ email: newEmail });
     if (emailExists) {
-        return res.status(400).json({ message: 'Email already exists.' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Email already exists.' });
     }
 
     // Generate OTP
@@ -416,7 +417,7 @@ const sendEmailUpdateOtp = asyncHandler(async (req, res) => {
     // Send OTP via email
     await sendOtpEmail(newEmail, otp, 'Email Update Verification');
 
-    res.status(200).json({ message: 'Verification code sent to new email.' });
+    res.status(HTTP_STATUS.OK).json({ message: 'Verification code sent to new email.' });
 });
 
 // Verify email update OTP
@@ -431,7 +432,7 @@ const verifyEmailUpdateOtp = asyncHandler(async (req, res) => {
     });
 
     if (!user) {
-        return res.status(400).json({ message: 'Invalid or expired verification code.' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Invalid or expired verification code.' });
     }
 
     // Update email
@@ -441,7 +442,7 @@ const verifyEmailUpdateOtp = asyncHandler(async (req, res) => {
     user.newEmailPending = undefined;
     await user.save();
 
-    res.status(200).json({ 
+    res.status(HTTP_STATUS.OK).json({ 
         message: 'Email updated successfully.',
         email: user.email 
     });
@@ -454,7 +455,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
     const user = await User.findById(userId);
     if (!user) {
-        return res.status(404).json({ message: 'User not found.' });
+        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'User not found.' });
     }
 
     if (username) user.username = username;
@@ -463,7 +464,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
     await user.save();
 
-    res.status(200).json({
+    res.status(HTTP_STATUS.OK).json({
         message: 'Profile updated successfully',
         user: {
             _id: user._id,

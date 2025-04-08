@@ -1,5 +1,6 @@
 import Brand from '../models/brandModel.js';
 import asyncHandler from '../middlewares/asyncHandler.js';
+import { HTTP_STATUS } from '../utils/httpStatus.js';
 
 export const getBrands = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page) || 1;
@@ -50,7 +51,7 @@ export const createBrand = asyncHandler(async (req, res) => {
 
     const brandExists = await Brand.findOne({ name });
     if (brandExists) {
-        res.status(400);
+        res.status(HTTP_STATUS.BAD_REQUEST);
         throw new Error('Brand already exists');
     }
 
@@ -59,9 +60,9 @@ export const createBrand = asyncHandler(async (req, res) => {
     });
 
     if (brand) {
-        res.status(201).json(brand);
+        res.status(HTTP_STATUS.CREATED).json(brand);
     } else {
-        res.status(400);
+        res.status(HTTP_STATUS.BAD_REQUEST);
         throw new Error('Invalid brand data');
     }
 });
@@ -76,7 +77,7 @@ export const updateBrand = asyncHandler(async (req, res) => {
         const updatedBrand = await brand.save();
         res.json(updatedBrand);
     } else {
-        res.status(404);
+        res.status(HTTP_STATUS.NOT_FOUND);
         throw new Error('Brand not found');
     }
 });
@@ -90,7 +91,7 @@ export const toggleBrandStatus = asyncHandler(async (req, res) => {
         const updatedBrand = await brand.save();
         res.json(updatedBrand);
     } else {
-        res.status(404);
+        res.status(HTTP_STATUS.NOT_FOUND);
         throw new Error('Brand not found');
     }
 });

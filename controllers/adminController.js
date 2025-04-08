@@ -2,6 +2,7 @@ import User from "../models/userModel.js";
 import asyncHandler from "../middlewares/asyncHandler.js";
 import generateToken from '../utils/createToken.js';
 import bcrypt from 'bcryptjs';
+import { HTTP_STATUS } from "../utils/httpStatus.js";
 
 
 const loginAdmin = asyncHandler(async (req, res) => {
@@ -9,20 +10,20 @@ const loginAdmin = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-        return res.status(401).json({ message: 'Invalid email or password.' });
+        return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: 'Invalid email or password.' });
     }
     if (!user.isAdmin) {
-        return res.status(403).json({ message: 'Access denied. Not an admin user.' });
+        return res.status(HTTP_STATUS.FORBIDDEN).json({ message: 'Access denied. Not an admin user.' });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-        return res.status(401).json({ message: 'Invalid email or password.' });
+        return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: 'Invalid email or password.' });
     }
 
     generateToken(res, user._id);
 
-    res.status(200).json({
+    res.status(HTTP_STATUS.OK).json({
         _id: user._id,
         username: user.username,
         email: user.email,
@@ -33,7 +34,7 @@ const loginAdmin = asyncHandler(async (req, res) => {
 
 const logoutAdmin = asyncHandler(async (req, res) => {
     res.cookie('jwt', '', { httpOnly: true, expires: new Date(0) });
-    res.status(200).json({ message: 'Logged out successfully' });
+    res.status(HTTP_STATUS.OK).json({ message: 'Logged out successfully' });
 });
 
 
@@ -72,7 +73,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
         .limit(parseInt(limit))
         .skip(skip);
 
-    res.status(200).json({
+    res.status(HTTP_STATUS.OK).json({
         users,
         pagination: {
             page: parseInt(page),

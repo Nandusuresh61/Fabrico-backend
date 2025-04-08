@@ -1,6 +1,6 @@
 import asyncHandler from '../middlewares/asyncHandler.js';
 import Wishlist from '../models/wishlistModel.js';
-
+import { HTTP_STATUS } from '../utils/httpStatus.js';
 
 const getWishlist = asyncHandler(async (req, res) => {
     let wishlist = await Wishlist.findOne({ user: req.user._id })
@@ -77,7 +77,7 @@ const addToWishlist = asyncHandler(async (req, res) => {
             select: 'color price discountPrice mainImage stock'
         });
 
-    res.status(201).json(wishlist);
+    res.status(HTTP_STATUS.CREATED).json(wishlist);
 });
 
 
@@ -85,7 +85,7 @@ const removeFromWishlist = asyncHandler(async (req, res) => {
     let wishlist = await Wishlist.findOne({ user: req.user._id });
 
     if (!wishlist) {
-        return res.status(404).json({ message: 'Wishlist not found' });
+        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Wishlist not found' });
     }
 
     wishlist.items = wishlist.items.filter(

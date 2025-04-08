@@ -2,6 +2,7 @@ import Product from '../models/productModel.js';
 import cloudinary from '../config/cloudinary.js';
 import Variant from '../models/varientModel.js';
 import Category from '../models/categoryModel.js';
+import { HTTP_STATUS } from '../utils/httpStatus.js';
 
 
 export const addProduct = async (req, res) => {
@@ -10,18 +11,18 @@ export const addProduct = async (req, res) => {
 
     // Validate required fields
     if (!name || !description || !category || !brand || !variants || !Array.isArray(variants) || variants.length === 0) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Missing required fields' });
     }
 
     // Check if files are provided
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: 'At least one image is required' });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'At least one image is required' });
     }
 
     // Count total images needed (3 per variant)
     const totalImagesNeeded = variants.length * 3;
     if (req.files.length < totalImagesNeeded) {
-      return res.status(400).json({ message: `At least ${totalImagesNeeded} images are required (3 per variant)` });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: `At least ${totalImagesNeeded} images are required (3 per variant)` });
     }
    
     const product = new Product({
@@ -90,10 +91,10 @@ export const addProduct = async (req, res) => {
         select: 'color stock price discountPrice mainImage subImages isBlocked'
       });
 
-    res.status(201).json({ message: 'Product added successfully', product: populatedProduct });
+    res.status(HTTP_STATUS.CREATED).json({ message: 'Product added successfully', product: populatedProduct });
   } catch (error) {
     console.error('Error in addProduct:', error);
-    res.status(500).json({ message: error.message });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -115,12 +116,12 @@ export const editProduct = async (req, res) => {
     // Find the product and variant
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Product not found' });
     }
 
     const variant = await Variant.findById(variantId);
     if (!variant) {
-      return res.status(404).json({ message: 'Variant not found' });
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Variant not found' });
     }
 
     // Get current images that need to be deleted
@@ -168,7 +169,7 @@ export const editProduct = async (req, res) => {
     
     // Ensure we have at least one image
     if (allImages.length === 0) {
-      return res.status(400).json({ message: 'At least one image is required' });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'At least one image is required' });
     }
 
     // Update variant fields
@@ -181,7 +182,7 @@ export const editProduct = async (req, res) => {
 
     await variant.save();
 
-    res.status(200).json({ 
+    res.status(HTTP_STATUS.OK).json({ 
       message: 'Variant updated successfully', 
       productId,
       variantId,
@@ -189,7 +190,7 @@ export const editProduct = async (req, res) => {
     });
   } catch (error) {
     console.error('Error in editProduct:', error);
-    res.status(500).json({ message: error.message });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -248,7 +249,7 @@ export const getAllProducts = async (req, res) => {
       total
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -259,25 +260,25 @@ export const toggleProductStatus = async (req, res) => {
 
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Product not found' });
     }
 
     const variant = await Variant.findById(variantId);
     if (!variant) {
-      return res.status(404).json({ message: 'Variant not found' });
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Variant not found' });
     }
 
     variant.isBlocked = !variant.isBlocked;
     await variant.save();
 
-    res.status(200).json({ 
+    res.status(HTTP_STATUS.OK).json({ 
       message: 'Variant status updated', 
       productId,
       variantId,
       variant 
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -288,7 +289,7 @@ export const toggleProductMainStatus = async (req, res) => {
 
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Product not found' });
     }
 
     product.status = product.status === 'active' ? 'blocked' : 'active';
@@ -303,12 +304,12 @@ export const toggleProductMainStatus = async (req, res) => {
         select: 'color stock price discountPrice mainImage subImages isBlocked'
       });
 
-    res.status(200).json({ 
+    res.status(HTTP_STATUS.OK).json({ 
       message: 'Product status updated', 
       product: populatedProduct
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -326,17 +327,17 @@ export const getProductById = async (req, res) => {
       });
 
     if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Product not found' });
     }
 
     // Check if product is blocked
     if (product.status === 'blocked') {
-      return res.status(403).json({ message: 'Product is not available' });
+      return res.status(HTTP_STATUS.FORBIDDEN).json({ message: 'Product is not available' });
     }
 
     // Check if category or brand is blocked
     if (product.category?.status === 'Deactivated' || product.brand?.status === 'Deactivated') {
-      return res.status(403).json({ message: 'Product is not available' });
+      return res.status(HTTP_STATUS.FORBIDDEN).json({ message: 'Product is not available' });
     }
 
     // Filter out blocked variants
@@ -344,12 +345,12 @@ export const getProductById = async (req, res) => {
 
     // If no active variants, return error
     if (product.variants.length === 0) {
-      return res.status(403).json({ message: 'Product is not available' });
+      return res.status(HTTP_STATUS.FORBIDDEN).json({ message: 'Product is not available' });
     }
 
-    res.status(200).json(product);
+    res.status(HTTP_STATUS.OK).json(product);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -467,7 +468,7 @@ export const getAllProductsForUsers = async (req, res) => {
     // Get total count for pagination
     const total = await Product.countDocuments(query);
 
-    res.status(200).json({
+    res.status(HTTP_STATUS.OK).json({
       products: filteredProducts,
       currentPage: Number(page),
       totalPages: Math.ceil(total / Number(limit)),
@@ -475,7 +476,7 @@ export const getAllProductsForUsers = async (req, res) => {
     });
   } catch (error) {
     console.error('Error in getAllProductsForUsers:', error);
-    res.status(500).json({ message: error.message });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -487,7 +488,7 @@ export const editProductName = async (req, res) => {
 
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Product not found' });
     }
 
     product.name = name;
@@ -502,12 +503,12 @@ export const editProductName = async (req, res) => {
         select: 'color stock price discountPrice mainImage subImages isBlocked'
       });
 
-    res.status(200).json({
+    res.status(HTTP_STATUS.OK).json({
       message: 'Product name updated successfully',
       product: populatedProduct
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -519,23 +520,23 @@ export const updateProductStock = async (req, res) => {
 
     const variant = await Variant.findById(variantId);
     if (!variant) {
-      return res.status(404).json({ message: 'Variant not found' });
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Variant not found' });
     }
 
     if (variant.stock < quantity) {
-      return res.status(400).json({ message: 'Insufficient stock' });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Insufficient stock' });
     }
 
     // Update stock
     variant.stock -= quantity;
     await variant.save();
 
-    res.status(200).json({ 
+    res.status(HTTP_STATUS.OK).json({ 
       message: 'Stock updated successfully',
       updatedStock: variant.stock
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 

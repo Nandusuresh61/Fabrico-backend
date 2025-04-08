@@ -3,6 +3,7 @@ import Cart from '../models/cartModel.js';
 import Variant from '../models/varientModel.js';
 import Product from '../models/productModel.js';
 import Category from '../models/categoryModel.js';
+import { HTTP_STATUS } from '../utils/httpStatus.js';
 
 
 const getCart = asyncHandler(async (req, res) => {
@@ -54,17 +55,17 @@ const addToCart = asyncHandler(async (req, res) => {
     const product = await Product.findById(productId)
     .populate("category");
     if(!product){
-        return res.status(404).json({ message : "Product not found"});
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message : "Product not found"});
     }
 
     if(product.status !== 'active'){
-        return res.status(400).json({ message : "This product is currently unavailable"});
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message : "This product is currently unavailable"});
     }
 
     //check the varient exist and is not blocked
     const variant = await Variant.findById(variantId);
     if(!variant || variant.isBlocked){
-        return res.status(400).json({message : "This Product Variant is currently unavailable"});
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({message : "This Product Variant is currently unavailable"});
     }
 
 
@@ -94,7 +95,7 @@ const addToCart = asyncHandler(async (req, res) => {
 
     // Check if new quantity exceeds stock
     if (newQuantity > variant.stock) {
-        return res.status(400).json({ 
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
             message: `Cannot add ${quantity} more items. Insufficient Stock!.` 
         });
     }
@@ -134,7 +135,7 @@ const addToCart = asyncHandler(async (req, res) => {
 
     await cart.save();
 
-    res.status(201).json(cart);
+    res.status(HTTP_STATUS.CREATED).json(cart);
 });
 
 
@@ -179,17 +180,17 @@ const updateCartQuantity = asyncHandler(async (req, res) => {
     let cart = await Cart.findOne({ user: req.user._id });
 
     if (!cart) {
-        return res.status(404).json({ message: 'Cart not found' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Cart not found' });
     }
 
     const cartItem = cart.items.find(item => item._id.toString() === itemId);
     
     if (!cartItem) {
-        return res.status(404).json({ message: 'Item not found in cart' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Item not found in cart' });
     }
 
     if (quantity < 1) {
-        return res.status(400).json({ message: 'Quantity must be at least 1' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Quantity must be at least 1' });
     }
 
     cartItem.quantity = quantity;
@@ -218,7 +219,7 @@ const clearCart = asyncHandler(async (req, res) => {
     let cart = await Cart.findOne({ user: req.user._id });
 
     if (!cart) {
-        return res.status(404).json({ message: 'Cart not found' });
+        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Cart not found' });
     }
 
     cart.items = [];
