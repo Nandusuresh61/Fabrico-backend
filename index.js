@@ -14,6 +14,7 @@ import orderRoutes from './routes/orderRoutes.js'
 import walletRoutes from './routes/walletRoutes.js'
 import csrfProtection from './middlewares/csrfMiddleware.js';
 import morgan from 'morgan';
+import helmet from 'helmet';
 
 dotenv.config();
 import connectDB from './config/db.js';
@@ -30,6 +31,7 @@ app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true,
 }));
+app.use(helmet());
 
 app.use((req, res, next) => {
   res.removeHeader("Cross-Origin-Opener-Policy"); // Remove COOP

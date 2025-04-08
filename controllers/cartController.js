@@ -95,7 +95,7 @@ const addToCart = asyncHandler(async (req, res) => {
     // Check if new quantity exceeds stock
     if (newQuantity > variant.stock) {
         return res.status(400).json({ 
-            message: `Cannot add ${quantity} more items. Only ${variant.stock - (itemExists ? itemExists.quantity : 0)} items available in stock.` 
+            message: `Cannot add ${quantity} more items. Insufficient Stock!.` 
         });
     }
 
