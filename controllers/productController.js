@@ -392,24 +392,12 @@ export const getAllProductsForUsers = async (req, res) => {
       query.brand = brand;
     }
 
-    // Sort configuration
-    let sortConfig = {};
-    switch (sort) {
-      case 'price-low':
-        sortConfig = { 'variants.0.price': 1 };
-        break;
-      case 'price-high':
-        sortConfig = { 'variants.0.price': -1 };
-        break;
-      case 'name-asc':
-        sortConfig = { name: 1 };
-        break;
-      case 'name-desc':
-        sortConfig = { name: -1 };
-        break;
-      default:
-        sortConfig = { createdAt: -1 }; 
-    }
+    // Helper function to get effective price
+    const getEffectivePrice = (variant) => {
+      return variant.discountPrice && variant.discountPrice < variant.price 
+          ? variant.discountPrice 
+          : variant.price;
+    };
 
     // Pagination
     const skip = (Number(page) - 1) * Number(limit);
@@ -422,7 +410,6 @@ export const getAllProductsForUsers = async (req, res) => {
         path: 'variants',
         select: 'color stock price discountPrice mainImage subImages isBlocked'
       })
-      .sort(sortConfig)
       .skip(skip)
       .limit(Number(limit));
 
@@ -443,12 +430,6 @@ export const getAllProductsForUsers = async (req, res) => {
       }
 
       // Check price range
-      const getEffectivePrice = (variant) => {
-        return variant.discountPrice && variant.discountPrice < variant.price 
-            ? variant.discountPrice 
-            : variant.price;
-      };
-
       const lowestPrice = Math.min(...activeVariants.map(v => getEffectivePrice(v)));
       if (lowestPrice < Number(minPrice) || lowestPrice > Number(maxPrice)) {
         return false;
@@ -457,15 +438,30 @@ export const getAllProductsForUsers = async (req, res) => {
       return true;
     });
 
-    // After filtering products, add this sorting
-    if (sort === 'price-low' || sort === 'price-high') {
-      filteredProducts.sort((a, b) => {
-        const priceA = Math.min(...a.variants.filter(v => !v.isBlocked)
-            .map(v => getEffectivePrice(v)));
-        const priceB = Math.min(...b.variants.filter(v => !v.isBlocked)
-            .map(v => getEffectivePrice(v)));
-        return sort === 'price-low' ? priceA - priceB : priceB - priceA;
-      });
+    // Apply sorting after filtering
+    switch (sort) {
+      case 'price-low':
+        filteredProducts.sort((a, b) => {
+          const priceA = Math.min(...a.variants.filter(v => !v.isBlocked).map(v => getEffectivePrice(v)));
+          const priceB = Math.min(...b.variants.filter(v => !v.isBlocked).map(v => getEffectivePrice(v)));
+          return priceA - priceB;
+        });
+        break;
+      case 'price-high':
+        filteredProducts.sort((a, b) => {
+          const priceA = Math.min(...a.variants.filter(v => !v.isBlocked).map(v => getEffectivePrice(v)));
+          const priceB = Math.min(...b.variants.filter(v => !v.isBlocked).map(v => getEffectivePrice(v)));
+          return priceB - priceA;
+        });
+        break;
+      case 'name-asc':
+        filteredProducts.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'name-desc':
+        filteredProducts.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      default: // 'featured' - sort by creation date
+        filteredProducts.sort((a, b) => b.createdAt - a.createdAt);
     }
 
     // Get total count for pagination
