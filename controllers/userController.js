@@ -335,6 +335,12 @@ const changePassword = asyncHandler(async (req, res) => {
 export const googleAuthController = asyncHandler(async (req, res) => {
     const { code } = req.query;
     
+    if (!code) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+            message: 'Authorization code is required'
+        });
+    }
+    
     try {
         const googleRes = await Promise.race([
             oauth2Client.getToken(code),
@@ -353,6 +359,13 @@ export const googleAuthController = asyncHandler(async (req, res) => {
         );
 
         const { email, name } = userRes.data;
+        
+        if (!email) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
+                message: 'Email not provided by Google'
+            });
+        }
+        
         let user = await User.findOne({ email });
         
         
@@ -384,8 +397,21 @@ export const googleAuthController = asyncHandler(async (req, res) => {
         });
     } catch (error) {
         console.error('Google Auth Error:', error);
+        
+        if (error.message === 'Request timeout') {
+            return res.status(HTTP_STATUS.REQUEST_TIMEOUT).json({
+                message: 'Authentication request timed out. Please try again.'
+            });
+        }
+        
+        if (error.response && error.response.status === 400) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
+                message: 'Invalid authorization code. Please try again.'
+            });
+        }
+        
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-            message: error.message || 'Failed to authenticate with Google',
+            message: 'Failed to authenticate with Google',
             details: error.code === 'ETIMEDOUT' ? 'Connection timed out. Please try again.' : undefined
         });
     }
