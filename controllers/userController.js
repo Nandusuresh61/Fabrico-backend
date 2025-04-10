@@ -128,7 +128,18 @@ const verifyOtp = asyncHandler(async (req, res) => {
     user.otpExpiry = undefined;
     await user.save();
 
-    res.status(HTTP_STATUS.OK).json({ message: 'Email verified successfully.' });
+    // Generate token after successful verification
+    generateToken(res, user._id);
+
+    res.status(HTTP_STATUS.OK).json({ 
+        message: 'Email verified successfully.',
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        profileImage: user.profileImage,
+        phone: user.phone
+    });
 });
 
 // Resend OTP
