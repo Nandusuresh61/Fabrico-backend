@@ -15,7 +15,7 @@ import {
     sendEmailUpdateOtp,
     changePassword
 } from '../controllers/userController.js';
-import { authenticate } from '../middlewares/authMiddleware.js';
+import { authenticate } from '../middlewares/authMiddleWare.js'
 
 const router = express.Router();
 

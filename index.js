@@ -13,6 +13,7 @@ import cartRoutes from './routes/cartRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
 import walletRoutes from './routes/walletRoutes.js'
 import csrfProtection from './middlewares/csrfMiddleware.js';
+import offerRoutes from './routes/offerRoutes.js'
 import morgan from 'morgan';
 import helmet from 'helmet';
 
@@ -64,4 +65,5 @@ app.use('/api/cart', cartRoutes);
 
 app.use('/api/orders', orderRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/offers', offerRoutes)
 app.listen(port, (console.log(`server is running on port ${port}`)))
