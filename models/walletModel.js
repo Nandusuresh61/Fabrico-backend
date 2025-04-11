@@ -69,6 +69,7 @@ const walletSchema = new mongoose.Schema({
 
 // Index for faster queries
 walletSchema.index({ 'transactions.date': -1 });
+walletSchema.index({ userId: 1 });
 
 // Method to add a new transaction
 walletSchema.methods.addTransaction = async function(transaction) {

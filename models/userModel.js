@@ -20,10 +20,17 @@ const userSchema = new mongoose.Schema(
     resetPasswordOtpExpiry: { type: Date },
     emailUpdateOtp: { type: String },
     emailUpdateOtpExpiry: { type: Date },
-    newEmailPending: { type: String }
+    newEmailPending: { type: String },
+    // Referral code fields
+    referralCode: { type: String, unique: true },
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    referralBonusReceived: { type: Boolean, default: false }
   },
   { timestamps: true }
 );
+
+// Create index for referral code
+userSchema.index({ referralCode: 1 });
 
 const User = mongoose.model('User', userSchema);
 

@@ -6,10 +6,29 @@ import nodemailer from 'nodemailer';
 import { oauth2Client } from "../utils/googleConfig.js";
 import axios from "axios";
 import { HTTP_STATUS } from '../utils/httpStatus.js';
+import Wallet from '../models/walletModel.js';
+import crypto from 'crypto';
+
+// Generate a unique referral code
+const generateReferralCode = async (username) => {
+  // Create a base code from username (first 3 chars) and random string
+  const baseCode = username.substring(0, 3).toUpperCase();
+  const randomString = crypto.randomBytes(3).toString('hex').toUpperCase();
+  const referralCode = `${baseCode}${randomString}`;
+  
+  // Check if code already exists
+  const existingUser = await User.findOne({ referralCode });
+  if (existingUser) {
+    // If code exists, generate a new one recursively
+    return generateReferralCode(username);
+  }
+  
+  return referralCode;
+};
 
 // Create a new user
 const createUser = asyncHandler(async (req, res) => {
-    const { username, email, phone, password, profileImage } = req.body;
+    const { username, email, phone, password, profileImage, referralCode } = req.body;
 
     if (!username || !email || !password || !phone) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Please fill all required fields.' });
@@ -33,6 +52,18 @@ const createUser = asyncHandler(async (req, res) => {
         await User.findByIdAndDelete(userExists._id);
     }
 
+    // Generate unique referral code for the new user
+    const userReferralCode = await generateReferralCode(username);
+    
+    // Check if user was referred by someone
+    let referredBy = null;
+    if (referralCode) {
+        const referrer = await User.findOne({ referralCode });
+        if (referrer) {
+            referredBy = referrer._id;
+        }
+    }
+
     // Create new user with OTP details
     const newUser = new User({
         username,
@@ -42,7 +73,9 @@ const createUser = asyncHandler(async (req, res) => {
         profileImage,
         isVerified: false,
         otp,
-        otpExpiry
+        otpExpiry,
+        referralCode: userReferralCode,
+        referredBy
     });
     
     await newUser.save();
@@ -57,7 +90,8 @@ const createUser = asyncHandler(async (req, res) => {
         email: newUser.email,
         phone: newUser.phone,
         isAdmin: newUser.isAdmin,
-        profileImage: newUser.profileImage
+        profileImage: newUser.profileImage,
+        referralCode: newUser.referralCode
     });
 });
 
@@ -128,6 +162,65 @@ const verifyOtp = asyncHandler(async (req, res) => {
     user.otpExpiry = undefined;
     await user.save();
 
+    // Process referral bonus if user was referred
+    if (user.referredBy && !user.referralBonusReceived) {
+        try {
+            // Add bonus to new user's wallet
+            let newUserWallet = await Wallet.findOne({ userId: user._id });
+            if (!newUserWallet) {
+                newUserWallet = new Wallet({
+                    userId: user._id,
+                    balance: 0,
+                    currency: 'INR'
+                });
+            }
+            
+            // Add 200 INR to new user's wallet
+           await newUserWallet.addTransaction({
+                id: `REF-${Date.now()}-${user._id}`,
+                type: 'credit',
+                amount: 200,
+                description: 'Referral bonus for signing up',
+                status: 'completed'
+            });
+            
+            await newUserWallet.save();
+            
+
+            
+            // Add bonus to referrer's wallet
+            let referrerWallet = await Wallet.findOne({ userId: user.referredBy });
+            if (!referrerWallet) {
+                referrerWallet = new Wallet({
+                    userId: user.referredBy,
+                    balance: 0,
+                    currency: 'INR'
+                });
+            }
+            await referrerWallet.save();
+            
+            // Add 200 INR to referrer's wallet
+            await referrerWallet.addTransaction({
+                id: `REF-${Date.now()}-${user.referredBy}`,
+                type: 'credit',
+                amount: 200,
+                description: 'Referral bonus for referring a friend',
+                status: 'completed'
+            });
+
+            await referrerWallet.save();
+            
+            
+            
+            // Mark referral bonus as received
+            user.referralBonusReceived = true;
+            await user.save();
+        } catch (error) {
+            console.error('Error processing referral bonus:', error);
+            // Continue with verification even if bonus processing fails
+        }
+    }
+
     // Generate token after successful verification
     generateToken(res, user._id);
 
@@ -138,7 +231,8 @@ const verifyOtp = asyncHandler(async (req, res) => {
         email: user.email,
         isAdmin: user.isAdmin,
         profileImage: user.profileImage,
-        phone: user.phone
+        phone: user.phone,
+        referralCode: user.referralCode
     });
 });
 
@@ -508,7 +602,8 @@ const updateUserProfile = asyncHandler(async (req, res) => {
             username: user.username,
             email: user.email,
             phone: user.phone,
-            profileImage: user.profileImage
+            profileImage: user.profileImage,
+            referralCode: user.referralCode
         }
     });
 });
