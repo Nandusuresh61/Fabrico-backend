@@ -110,8 +110,12 @@ export const getAllOffers = asyncHandler(async (req, res) => {
 
   const query = {};
 
+  
   if (search) {
-    query.offerName = { $regex: search, $options: "i" };
+    query.$or = [
+      { offerName : { $regex: search, $options: "i" } },
+      { offerType : { $regex: search, $options: "i" } }
+    ];
   }
 
   if (status) {

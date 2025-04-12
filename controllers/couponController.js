@@ -72,7 +72,10 @@ export const getAllCoupons = asyncHandler(async (req, res) => {
   const query = {};
 
   if (search) {
-    query.couponCode = { $regex: search, $options: 'i' };
+    query.$or = [
+      { couponCode: { $regex: search, $options: 'i' } },
+      { discountType: { $regex: search, $options: 'i' } }
+    ];
   }
 
   if (status === 'active') {
@@ -94,7 +97,7 @@ export const getAllCoupons = asyncHandler(async (req, res) => {
     .skip(skip)
     .limit(limit);
 
-  res.json({
+  res.status(HTTP_STATUS.OK).json({
     coupons,
     page,
     totalPages: Math.ceil(total / limit),
