@@ -3,9 +3,9 @@ import Coupon from '../models/couponModel.js';
 import { HTTP_STATUS } from '../utils/httpStatus.js';
 
 export const createCoupon = asyncHandler(async (req, res) => {
-  const { code, discountType, discountValue, minimumAmount, startDate, endDate } = req.body;
+  const { code, description, discountType, discountValue, minimumAmount, startDate, endDate } = req.body;
 
-  if (!code || !discountType || !discountValue || !minimumAmount || !startDate || !endDate) {
+  if (!code || !description || !discountType || !discountValue || !minimumAmount || !startDate || !endDate) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
       message: 'All fields are required' 
     });
@@ -48,6 +48,7 @@ export const createCoupon = asyncHandler(async (req, res) => {
 
   const coupon = await Coupon.create({
     couponCode: code.toUpperCase(),
+    description,
     discountType,
     discountValue,
     minOrderAmount: minimumAmount,
@@ -106,7 +107,7 @@ export const getAllCoupons = asyncHandler(async (req, res) => {
 });
 
 export const updateCoupon = asyncHandler(async (req, res) => {
-  const { code, discountType, discountValue, minimumAmount, startDate, endDate } = req.body;
+  const { code, description, discountType, discountValue, minimumAmount, startDate, endDate } = req.body;
   const couponId = req.params.id;
 
   const coupon = await Coupon.findById(couponId);
@@ -142,6 +143,7 @@ export const updateCoupon = asyncHandler(async (req, res) => {
     couponId,
     {
       couponCode: code ? code.toUpperCase() : coupon.couponCode,
+      description: description || coupon.description,
       discountType: discountType || coupon.discountType,
       discountValue: discountValue || coupon.discountValue,
       minOrderAmount: minimumAmount || coupon.minOrderAmount,
