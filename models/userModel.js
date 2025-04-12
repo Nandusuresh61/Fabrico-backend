@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema(
 );
 
 // Create index for referral code
-userSchema.index({ referralCode: 1 });
+// userSchema.index({ referralCode: 1 });
 
 const User = mongoose.model('User', userSchema);
 
