@@ -34,6 +34,9 @@ export const createCoupon = asyncHandler(async (req, res) => {
   const end = new Date(endDate);
   const now = new Date();
 
+  start.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+
   if (start < now) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
       message: 'Start date cannot be in the past' 
@@ -93,6 +96,17 @@ export const getAllCoupons = asyncHandler(async (req, res) => {
   const sortOptions = { [sortField]: sortOrder };
 
   const total = await Coupon.countDocuments(query);
+
+  if (total === 0) {
+    return res.status(HTTP_STATUS.OK).json({
+      message: 'No coupons available',
+      coupons: [],
+      page: 1,
+      totalPages: 0,
+      total: 0
+    });
+  }
+
   const coupons = await Coupon.find(query)
     .sort(sortOptions)
     .skip(skip)
