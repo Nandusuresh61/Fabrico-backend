@@ -308,7 +308,8 @@ const loginUser = asyncHandler(async (req, res) => {
         email: user.email,
         isAdmin: user.isAdmin,
         profileImage: user.profileImage,
-        phone: user.phone
+        phone: user.phone,
+        referralCode: user.referralCode
     });
 });
 
