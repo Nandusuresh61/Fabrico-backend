@@ -11,9 +11,12 @@ export const createCoupon = asyncHandler(async (req, res) => {
     });
   }
 
-
+  // Check for existing coupon using both field names
   const existingCoupon = await Coupon.findOne({ 
-    couponCode: { $regex: new RegExp(`^${code}$`, 'i') }
+    $or: [
+      { couponCode: { $regex: new RegExp(`^${code}$`, 'i') } },
+      { code: { $regex: new RegExp(`^${code}$`, 'i') } }
+    ]
   });
 
   if (existingCoupon) {
@@ -51,6 +54,7 @@ export const createCoupon = asyncHandler(async (req, res) => {
 
   const coupon = await Coupon.create({
     couponCode: code.toUpperCase(),
+    code: code.toUpperCase(), // Set both fields to ensure consistency
     description,
     discountType,
     discountValue,
@@ -132,11 +136,13 @@ export const updateCoupon = asyncHandler(async (req, res) => {
     });
   }
 
-
   if (code && code !== coupon.couponCode) {
     const existingCoupon = await Coupon.findOne({
       _id: { $ne: couponId },
-      couponCode: { $regex: new RegExp(`^${code}$`, 'i') }
+      $or: [
+        { couponCode: { $regex: new RegExp(`^${code}$`, 'i') } },
+        { code: { $regex: new RegExp(`^${code}$`, 'i') } }
+      ]
     });
 
     if (existingCoupon) {
@@ -145,7 +151,6 @@ export const updateCoupon = asyncHandler(async (req, res) => {
       });
     }
   }
-
 
   if (discountType === 'percentage' && (discountValue <= 0 || discountValue > 100)) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
@@ -157,6 +162,7 @@ export const updateCoupon = asyncHandler(async (req, res) => {
     couponId,
     {
       couponCode: code ? code.toUpperCase() : coupon.couponCode,
+      code: code ? code.toUpperCase() : coupon.code,
       description: description || coupon.description,
       discountType: discountType || coupon.discountType,
       discountValue: discountValue || coupon.discountValue,
