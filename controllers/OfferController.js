@@ -8,38 +8,59 @@ import { HTTP_STATUS } from "../utils/httpStatus.js";
 // Helper function
 
 const applyOfferDiscount = async (offer) => {
- if(offer.offerType === "product") {
-  for (const productId of offer.items) {
-    const variants = await Variant.find({ product: productId });
-    for (const variant of variants) {
-        const discountAmount = (variant.price * offer.discountPercentage) / 100;
-        (variant.discountPrice = Math.round(variant.price - discountAmount));
+  if (offer.offerType === "product") {
+    // For product offers
+    for (const productId of offer.items) {
+      const variants = await Variant.find({ product: productId });
+      for (const variant of variants) {
+        // Check if there's an existing category offer
+        const product = await Product.findById(productId);
+        const categoryOffer = await Offer.findOne({
+          offerType: "category",
+          items: product.category,
+          isActive: true,
+          startDate: { $lte: new Date() },
+          endDate: { $gte: new Date() }
+        });
+
+        // Apply the higher discount
+        const productDiscount = offer.discountPercentage;
+        const categoryDiscount = categoryOffer ? categoryOffer.discountPercentage : 0;
+        const finalDiscount = Math.max(productDiscount, categoryDiscount);
+
+        const discountAmount = (variant.price * finalDiscount) / 100;
+        variant.discountPrice = Math.round(variant.price - discountAmount);
         await variant.save();
+      }
     }
-  } 
- }else {
-   for (const categoryId of offer.items) {
-   const products = await Product.find({ category: categoryId });
-   for (const product of products) {
-    const variants = await Variant.find({ product: product._id });
-    for (const variant of variants) {
-        const  productOffer = await Offer.findOne({
+  } else {
+    // For category offers
+    for (const categoryId of offer.items) {
+      const products = await Product.find({ category: categoryId });
+      for (const product of products) {
+        const variants = await Variant.find({ product: product._id });
+        for (const variant of variants) {
+          // Check if there's an existing product offer
+          const productOffer = await Offer.findOne({
             offerType: "product",
             items: product._id,
             isActive: true,
-            startDate: { $lte: new Date()},
-            endDate: { $gte: new Date()},
-            discountPercentage: { $gt: offer.discountPercentage }
-        });
-        if(!productOffer) {
-            const discountAmount = (variant.price * offer.discountPercentage) / 100;
-            (variant.discountPrice = Math.round(variant.price - discountAmount));
-            await variant.save(); 
+            startDate: { $lte: new Date() },
+            endDate: { $gte: new Date() }
+          });
+
+          // Apply the higher discount
+          const categoryDiscount = offer.discountPercentage;
+          const productDiscount = productOffer ? productOffer.discountPercentage : 0;
+          const finalDiscount = Math.max(categoryDiscount, productDiscount);
+
+          const discountAmount = (variant.price * finalDiscount) / 100;
+          variant.discountPrice = Math.round(variant.price - discountAmount);
+          await variant.save();
         }
+      }
     }
-   } 
-   }
- }
+  }
 };
 
 
@@ -177,6 +198,9 @@ export const updateOffer = asyncHandler(async (req, res) => {
   const end = new Date(endDate);
   const now = new Date();
 
+  start.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  
   if (start < now) {
     res.status(HTTP_STATUS.BAD_REQUEST);
     throw new Error("Offer start date cannot be in the past");
