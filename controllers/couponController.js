@@ -210,3 +210,95 @@ export const toggleCouponStatus = asyncHandler(async (req, res) => {
     coupon
   });
 });
+
+export const getAvailableCoupons = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const now = new Date();
+
+  const coupons = await Coupon.find({
+    isExpired: false,
+    startDate: { $lte: now },
+    endDate: { $gte: now },
+    usedBy: { $ne: userId }
+  });
+
+  res.status(HTTP_STATUS.OK).json({
+    coupons
+  });
+});
+
+export const validateCoupon = asyncHandler(async (req, res) => {
+  const { code, totalAmount } = req.body;
+  const userId = req.user._id;
+
+  if (!code || !totalAmount) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Coupon code and total amount are required'
+    });
+  }
+
+  const coupon = await Coupon.findOne({
+    $or: [
+      { couponCode: { $regex: new RegExp(`^${code}$`, 'i') } },
+      { code: { $regex: new RegExp(`^${code}$`, 'i') } }
+    ],
+    isExpired: false,
+    startDate: { $lte: new Date() },
+    endDate: { $gte: new Date() },
+    usedBy: { $ne: userId }
+  });
+
+  if (!coupon) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Invalid or expired coupon code'
+    });
+  }
+
+  if (totalAmount < coupon.minOrderAmount) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: `Minimum order amount of ₹${coupon.minOrderAmount} required for this coupon`
+    });
+  }
+
+  let discountAmount = 0;
+  if (coupon.discountType === 'percentage') {
+    discountAmount = (totalAmount * coupon.discountValue) / 100;
+  } else {
+    discountAmount = coupon.discountValue;
+  }
+
+  const finalAmount = totalAmount - discountAmount;
+
+  res.status(HTTP_STATUS.OK).json({
+    message: 'Coupon applied successfully',
+    coupon,
+    discountAmount,
+    finalAmount
+  });
+});
+
+export const markCouponAsUsed = asyncHandler(async (req, res) => {
+  const { couponId } = req.body;
+  const userId = req.user._id;
+
+  const coupon = await Coupon.findById(couponId);
+
+  if (!coupon) {
+    return res.status(HTTP_STATUS.NOT_FOUND).json({
+      message: 'Coupon not found'
+    });
+  }
+
+  if (coupon.usedBy.includes(userId)) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Coupon already used'
+    });
+  }
+
+  coupon.usedBy.push(userId);
+  await coupon.save();
+
+  res.status(HTTP_STATUS.OK).json({
+    message: 'Coupon marked as used'
+  });
+});
