@@ -17,6 +17,7 @@ import offerRoutes from './routes/offerRoutes.js'
 import couponRoutes from './routes/couponRoutes.js';
 import morgan from 'morgan';
 import helmet from 'helmet';
+import paymentRoutes from './routes/paymentRoutes.js';
 
 dotenv.config();
 import connectDB from './config/db.js';
@@ -68,4 +69,5 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api/coupons', couponRoutes);
+app.use('/api/payment', paymentRoutes);
 app.listen(port, (console.log(`server is running on port ${port}`)))
