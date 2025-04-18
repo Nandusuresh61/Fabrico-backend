@@ -4,6 +4,7 @@ import Payment from '../models/paymentModel.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { HTTP_STATUS } from '../utils/httpStatus.js';
+import Cart from '../models/cartModel.js';
 
 // Initialize Razorpay
 const razorpay = new Razorpay({
@@ -114,6 +115,10 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     // Update order status
     order.paymentStatus = 'completed';
     await order.save();
+    await Cart.findOneAndUpdate(
+        { user: req.user._id },
+        { $set: { items: [], totalAmount: 0 } }
+    );
 
     res.status(HTTP_STATUS.OK).json({
         success: true,
