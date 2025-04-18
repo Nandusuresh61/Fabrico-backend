@@ -215,21 +215,77 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
 });
 
 export const cancelOrder = asyncHandler(async (req, res) => {
-    const order = await Order.findById(req.params.id);
+    const { reason } = req.body;
+    const order = await Order.findById(req.params.id)
+        .populate('items.product')
+        .populate('items.variant');
 
-    if (order && (order.user.toString() === req.user._id.toString() || req.user.isAdmin)) {
-        if (order.status === 'pending' || order.status === 'processing') {
-            order.status = 'cancelled';
-            const updatedOrder = await order.save();
-            res.json(updatedOrder);
-        } else {
-            res.status(HTTP_STATUS.BAD_REQUEST);
-            throw new Error('Order cannot be cancelled');
-        }
-    } else {
+    if (!order) {
         res.status(HTTP_STATUS.NOT_FOUND);
         throw new Error('Order not found');
     }
+
+    if (order.user.toString() !== req.user._id.toString() && !req.user.isAdmin) {
+        res.status(HTTP_STATUS.UNAUTHORIZED);
+        throw new Error('Not authorized');
+    }
+
+    if (order.status !== 'pending' && order.status !== 'processing') {
+        res.status(HTTP_STATUS.BAD_REQUEST);
+        throw new Error('Order cannot be cancelled at this stage');
+    }
+
+    // Handle refund for online payment
+    if (order.paymentMethod === 'online' && order.paymentStatus === 'completed') {
+        try {
+            // Find or create user's wallet
+            let wallet = await Wallet.findOne({ userId: order.user });
+            if (!wallet) {
+                wallet = new Wallet({
+                    userId: order.user,
+                    balance: 0,
+                    currency: 'INR'
+                });
+            }
+
+            // Add refund amount to wallet
+            await wallet.addTransaction({
+                id: `REF-${Date.now()}-${order._id}`,
+                type: 'credit',
+                amount: order.totalAmount,
+                description: 'Refund for cancelled order',
+                orderId: order.orderId,
+                status: 'completed'
+            });
+
+            // Update payment status
+            const payment = await Payment.findOne({ order: order._id });
+            if (payment) {
+                payment.paymentStatus = 'refunded';
+                await payment.save();
+            }
+        } catch (error) {
+            console.error('Error processing refund:', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR);
+            throw new Error('Failed to process refund');
+        }
+    }
+
+    // Update product quantities
+    for (const item of order.items) {
+        const variant = item.variant;
+        variant.quantity += item.quantity;
+        await variant.save();
+    }
+
+    // Update order status
+    order.status = 'cancelled';
+    order.cancellationReason = reason;
+    order.cancelledAt = Date.now();
+    
+    const updatedOrder = await order.save();
+
+    res.json(updatedOrder);
 });
 
 
@@ -356,34 +412,67 @@ export const cancelOrderForUser = asyncHandler(async (req, res) => {
         throw new Error('Order not found');
     }
 
-    
     if (order.user._id.toString() !== req.user._id.toString()) {
         res.status(HTTP_STATUS.FORBIDDEN);
         throw new Error('Not authorized to cancel this order');
     }
 
-    
     if (order.status !== 'pending' && order.status !== 'processing') {
         res.status(HTTP_STATUS.BAD_REQUEST);
         throw new Error('Order cannot be cancelled at this stage');
     }
 
-    
+    // Handle refund for online payment
+    if (order.paymentMethod === 'online' && order.paymentStatus === 'completed') {
+        try {
+            // Find or create user's wallet
+            let wallet = await Wallet.findOne({ userId: order.user._id });
+            if (!wallet) {
+                wallet = await Wallet.create({
+                    userId: order.user._id,
+                    balance: 0,
+                    currency: 'INR'
+                });
+            }
+
+            // Add refund amount to wallet
+            await wallet.addTransaction({
+                id: `REF-${Date.now()}-${order._id}`,
+                type: 'credit',
+                amount: order.totalAmount,
+                description: 'Refund for cancelled order',
+                orderId: order.orderId,
+                status: 'completed'
+            });
+
+            // Update payment status
+            const payment = await Payment.findOne({ order: order._id });
+            if (payment) {
+                payment.paymentStatus = 'refunded';
+                await payment.save();
+            }
+        } catch (error) {
+            console.error('Error processing refund:', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR);
+            throw new Error('Failed to process refund');
+        }
+    }
+
+    // Update product quantities
     for (const item of order.items) {
         const variant = item.variant;
         if (variant) {
-            variant.stock += item.quantity;
+            variant.quantity += item.quantity; // Changed from stock to quantity
             await variant.save();
         }
     }
 
-    
+    // Update order status
     order.status = 'cancelled';
     order.cancellationReason = reason;
     order.cancelledAt = Date.now();
     await order.save();
 
-    
     const updatedOrder = await Order.findById(order._id)
         .populate('user', 'name email')
         .populate('items.product', 'name price brand category')
