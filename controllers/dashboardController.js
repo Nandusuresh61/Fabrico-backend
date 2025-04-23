@@ -8,7 +8,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     const today = new Date();
     const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
 
-    // Get total sales and orders
+
     const orderStats = await Order.aggregate([
         {
             $match: {
@@ -25,7 +25,6 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         }
     ]);
 
-    // Get refund count - count orders with return requests
     const refundStats = await Order.aggregate([
         {
             $match: {
@@ -48,14 +47,12 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         }
     ]);
 
-    // Get active customer count
     const customerCount = await User.countDocuments({
         isAdmin: false,
         status: 'active',
         isVerified: true
     });
 
-    // Get monthly comparison
     const monthlyComparison = await Order.aggregate([
         {
             $match: {

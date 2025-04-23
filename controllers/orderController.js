@@ -423,7 +423,7 @@ export const cancelOrderForUser = asyncHandler(async (req, res) => {
     }
 
     // Handle refund for online payment
-    if (order.paymentMethod === 'online' && order.paymentStatus === 'completed') {
+    if (order.paymentMethod === 'online' || order.paymentMethod === 'wallet' && order.paymentStatus === 'completed') {
         try {
             // Find or create user's wallet
             let wallet = await Wallet.findOne({ userId: order.user._id });
