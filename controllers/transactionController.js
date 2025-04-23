@@ -22,7 +22,8 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
     if (search) {
         matchConditions.$or = [
             { 'transactions.id': { $regex: search, $options: 'i' } },
-            { 'transactions.description': { $regex: search, $options: 'i' } }
+            { 'transactions.description': { $regex: search, $options: 'i' } },
+            { 'userDetails.username': { $regex: search, $options: 'i' } }
         ];
     }
 
