@@ -17,8 +17,8 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
     // Build match conditions
     
     const matchConditions = {};
-    if (type !== 'all') {
-        matchConditions['transactions.type'] = type;
+    if (type && type !== 'all') {
+        matchConditions['type'] = type;
     }
     if (search) {
         matchConditions.$or = [
@@ -66,12 +66,18 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
     const sortFieldMap = {
         'date': 'date',
         'amount': 'amount',
-        'id': 'transactionId'
+        'id': 'transactionId',
+        'type': 'type',
+        'status': 'status'
     };
+
+    const validSortField = sortFieldMap[sortField] || 'date';
+    const validSortOrder = sortOrder === 'asc' ? 1 : -1;
+
 
     pipeline.push({
         $sort: {
-            [sortFieldMap[sortField] || sortField]: sortOrder === 'desc' ? -1 : 1
+            [validSortField]: validSortOrder
         }
     });
 
