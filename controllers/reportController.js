@@ -139,9 +139,7 @@ export const downloadReport = asyncHandler(async (req, res) => {
     acc.totalOrders++;
     acc.totalSales += order.totalAmount;
     acc.totalUnits += order.items.reduce((sum, item) => sum + item.quantity, 0);
-    acc.totalDiscount += order.items.reduce((sum, item) => {
-      return sum + ((item.variant?.originalPrice - item.price) * item.quantity);
-    }, 0);
+    acc.productDiscount += order.productDiscount || 0;
     acc.couponDiscount += order.couponDiscount || 0;
     acc.paymentMethods[order.paymentMethod]++;
     return acc;
@@ -149,10 +147,11 @@ export const downloadReport = asyncHandler(async (req, res) => {
     totalOrders: 0,
     totalSales: 0,
     totalUnits: 0,
-    totalDiscount: 0,
+    productDiscount: 0,
     couponDiscount: 0,
     paymentMethods: { cod: 0, online: 0, wallet: 0 }
   });
+
 
   if (format === 'pdf') {
     const doc = new PDFDocument();
@@ -173,8 +172,9 @@ export const downloadReport = asyncHandler(async (req, res) => {
       doc.text(`Total Orders: ${summary.totalOrders}`);
       doc.text(`Total Sales: ₹${summary.totalSales.toFixed(2)}`);
       doc.text(`Total Units Sold: ${summary.totalUnits}`);
-      doc.text(`Total Discount: ₹${summary.totalDiscount.toFixed(2)}`);
+      doc.text(`Product Discount: ₹${summary.productDiscount.toFixed(2)}`);
       doc.text(`Coupon Discount: ₹${summary.couponDiscount.toFixed(2)}`);
+      doc.text(`Net Sales: ₹${(summary.totalSales - summary.productDiscount - summary.couponDiscount).toFixed(2)}`);
       doc.moveDown();
 
       // Payment Methods
@@ -190,27 +190,30 @@ export const downloadReport = asyncHandler(async (req, res) => {
       doc.fontSize(12);
 
       // Table headers
-      const startX = 50;
       let currentY = doc.y;
       doc.text('Order ID', startX, currentY);
-      doc.text('Date', startX + 100, currentY);
-      doc.text('Customer', startX + 200, currentY);
-      doc.text('Items', startX + 300, currentY);
-      doc.text('Amount', startX + 400, currentY);
+      doc.text('Date', startX + 80, currentY);
+      doc.text('Customer', startX + 160, currentY);
+      doc.text('Items', startX + 240, currentY);
+      doc.text('Product Disc.', startX + 300, currentY);
+      doc.text('Coupon Disc.', startX + 380, currentY);
+      doc.text('Amount', startX + 460, currentY);
       doc.moveDown();
 
       // Table rows
       orders.forEach(order => {
         currentY = doc.y;
-        if (currentY > 700) { // Start new page if near bottom
+        if (currentY > 700) {
           doc.addPage();
           currentY = doc.y;
         }
         doc.text(order.orderId, startX, currentY);
-        doc.text(new Date(order.createdAt).toLocaleDateString(), startX + 100, currentY);
-        doc.text(order.user.username, startX + 200, currentY);
-        doc.text(order.items.length.toString(), startX + 300, currentY);
-        doc.text(`₹${order.totalAmount.toFixed(2)}`, startX + 400, currentY);
+        doc.text(new Date(order.createdAt).toLocaleDateString(), startX + 80, currentY);
+        doc.text(order.user.username, startX + 160, currentY);
+        doc.text(order.items.length.toString(), startX + 240, currentY);
+        doc.text(`₹${(order.productDiscount || 0).toFixed(2)}`, startX + 300, currentY);
+        doc.text(`₹${(order.couponDiscount || 0).toFixed(2)}`, startX + 380, currentY);
+        doc.text(`₹${order.totalAmount.toFixed(2)}`, startX + 460, currentY);
         doc.moveDown();
       });
 
@@ -247,8 +250,9 @@ export const downloadReport = asyncHandler(async (req, res) => {
       { metric: 'Total Orders', value: summary.totalOrders },
       { metric: 'Total Sales', value: `₹${summary.totalSales.toFixed(2)}` },
       { metric: 'Total Units Sold', value: summary.totalUnits },
-      { metric: 'Total Discount', value: `₹${summary.totalDiscount.toFixed(2)}` },
+      { metric: 'Product Discount', value: `₹${summary.productDiscount.toFixed(2)}` },
       { metric: 'Coupon Discount', value: `₹${summary.couponDiscount.toFixed(2)}` },
+      { metric: 'Net Sales', value: `₹${(summary.totalSales - summary.productDiscount - summary.couponDiscount).toFixed(2)}` },
       { metric: 'COD Orders', value: summary.paymentMethods.cod },
       { metric: 'Online Orders', value: summary.paymentMethods.online },
       { metric: 'Wallet Orders', value: summary.paymentMethods.wallet }
@@ -283,7 +287,7 @@ export const downloadReport = asyncHandler(async (req, res) => {
         customer: order.user.username,
         items: order.items.length,
         amount: `₹${order.totalAmount.toFixed(2)}`,
-        discount: `₹${productDiscount.toFixed(2)}`,
+        discount: `₹${order.productDiscount.toFixed(2)}`,
         couponDiscount: `₹${(order.couponDiscount || 0).toFixed(2)}`,
         paymentMethod: order.paymentMethod.toUpperCase()
       });
