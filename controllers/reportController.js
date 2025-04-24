@@ -70,6 +70,7 @@ export const getSalesReport = asyncHandler(async (req, res) => {
           }
         },
         couponDiscount: { $sum: { $ifNull: ['$couponDiscount', 0] } },
+        productDiscount: { $sum: { $ifNull: ['$productDiscount', 0] } },
         paymentMethods: {
           $push: '$paymentMethod'
         }
@@ -85,6 +86,7 @@ export const getSalesReport = asyncHandler(async (req, res) => {
           totalUnits: '$totalUnits',
           totalDiscount: '$totalDiscount',
           couponDiscount: '$couponDiscount',
+          productDiscount: '$productDiscount',
           averageOrderValue: { $divide: ['$totalSales', '$totalOrders'] },
           paymentMethods: {
             cod: { $size: { $filter: { input: '$paymentMethods', cond: { $eq: ['$$this', 'cod'] } } } },
@@ -105,6 +107,7 @@ export const getSalesReport = asyncHandler(async (req, res) => {
         totalUnits: 0,
         totalDiscount: 0,
         couponDiscount: 0,
+        productDiscount: 0,
         averageOrderValue: 0,
         paymentMethods: { cod: 0, online: 0, wallet: 0 }
       }

@@ -30,6 +30,8 @@ export const createOrder = asyncHandler(async (req, res) => {
         shippingAddress,
         paymentMethod,
         totalAmount,
+        couponDiscount,
+        productDiscount
     } = req.body;
 
     if (!items || items.length === 0) {
@@ -78,6 +80,8 @@ export const createOrder = asyncHandler(async (req, res) => {
         shippingAddress: addressDetails,
         paymentMethod,
         totalAmount,
+        couponDiscount: couponDiscount || 0,
+        productDiscount: productDiscount || 0
     });
 
     if (order) {
