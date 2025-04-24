@@ -15,15 +15,16 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Build match conditions
+    
     const matchConditions = {};
     if (type !== 'all') {
         matchConditions['transactions.type'] = type;
     }
     if (search) {
         matchConditions.$or = [
-            { 'transactions.id': { $regex: search, $options: 'i' } },
-            { 'transactions.description': { $regex: search, $options: 'i' } },
-            { 'userDetails.username': { $regex: search, $options: 'i' } }
+            { 'transactionId': { $regex: search, $options: 'i' } },
+            { 'description': { $regex: search, $options: 'i' } },
+            { 'user.username': { $regex: search, $options: 'i' } }
         ];
     }
 
