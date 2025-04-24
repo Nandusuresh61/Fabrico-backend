@@ -338,7 +338,7 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
             id: `TRX-${Date.now()}`,
             type: 'credit',
             amount: refundAmount,
-            description: `Refund for Order ${order.orderId} - ${item.product.name}`,
+            description: `Refund for Order ${order.orderId}`,
             orderId: order.orderId,
             status: 'completed'
         };
