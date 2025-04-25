@@ -9,24 +9,24 @@ import { HTTP_STATUS } from '../utils/httpStatus.js';
 import Wallet from '../models/walletModel.js';
 import crypto from 'crypto';
 
-// Generate a unique referral code
+
 const generateReferralCode = async (username) => {
-  // Create a base code from username (first 3 chars) and random string
+  
   const baseCode = username.substring(0, 3).toUpperCase();
   const randomString = crypto.randomBytes(3).toString('hex').toUpperCase();
   const referralCode = `${baseCode}${randomString}`;
   
-  // Check if code already exists
+  
   const existingUser = await User.findOne({ referralCode });
   if (existingUser) {
-    // If code exists, generate a new one recursively
+    
     return generateReferralCode(username);
   }
   
   return referralCode;
 };
 
-// Create a new user
+
 const createUser = asyncHandler(async (req, res) => {
     const { username, email, phone, password, profileImage, referralCode } = req.body;
 
@@ -39,23 +39,24 @@ const createUser = asyncHandler(async (req, res) => {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'User already exists.' });
     }
 
-    // Generate OTP - 6 digit number
+    
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log("OTP : ",otp)
     const otpExpiry = new Date();
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10); // OTP valid for 10 minutes
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10); 
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Delete previous unverified account if exists
+    
     if (userExists && !userExists.isVerified) {
         await User.findByIdAndDelete(userExists._id);
     }
 
-    // Generate unique referral code for the new user
+    
     const userReferralCode = await generateReferralCode(username);
     
-    // Check if user was referred by someone
+    
     let referredBy = null;
     if (referralCode) {
         const referrer = await User.findOne({ referralCode });
@@ -64,7 +65,7 @@ const createUser = asyncHandler(async (req, res) => {
         }
     }
 
-    // Create new user with OTP details
+    
     const newUser = new User({
         username,
         email,
@@ -80,7 +81,7 @@ const createUser = asyncHandler(async (req, res) => {
     
     await newUser.save();
 
-    // Send OTP via email
+    
     await sendOtpEmail(email, otp);
 
     res.status(HTTP_STATUS.OK).json({
@@ -95,7 +96,7 @@ const createUser = asyncHandler(async (req, res) => {
     });
 });
 
-// Send OTP via email
+
 const sendOtpEmail = async (email, otp, subject = 'Your Verification Code for FABRICO') => {
     try {
         const transporter = nodemailer.createTransport({
@@ -106,7 +107,7 @@ const sendOtpEmail = async (email, otp, subject = 'Your Verification Code for FA
             }
         });
 
-        // Email content
+        
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
@@ -124,7 +125,7 @@ const sendOtpEmail = async (email, otp, subject = 'Your Verification Code for FA
             `
         };
 
-        // Send email
+        
         await transporter.sendMail(mailOptions);
         console.log("OTP email sent successfully");
     } catch (error) {
@@ -133,7 +134,7 @@ const sendOtpEmail = async (email, otp, subject = 'Your Verification Code for FA
     }
 };
 
-// Verify OTP
+
 const verifyOtp = asyncHandler(async (req, res) => {
     const { email, otp } = req.body;
     console.log(email, otp)
@@ -147,7 +148,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
         return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'User not found.' });
     }
 
-    // Check if OTP is correct and not expired
+
     if (user.otp !== otp) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Invalid OTP.' });
     }
@@ -156,16 +157,14 @@ const verifyOtp = asyncHandler(async (req, res) => {
         return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'OTP has expired.' });
     }
 
-    // Verify user and clear OTP fields
     user.isVerified = true;
     user.otp = undefined;
     user.otpExpiry = undefined;
     await user.save();
 
-    // Process referral bonus if user was referred
     if (user.referredBy && !user.referralBonusReceived) {
         try {
-            // Add bonus to new user's wallet
+
             let newUserWallet = await Wallet.findOne({ userId: user._id });
             if (!newUserWallet) {
                 newUserWallet = new Wallet({
@@ -174,8 +173,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
                     currency: 'INR'
                 });
             }
-            
-            // Add 200 INR to new user's wallet
+
            await newUserWallet.addTransaction({
                 id: `REF-${Date.now()}-${user._id}`,
                 type: 'credit',
@@ -188,7 +186,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
             
 
             
-            // Add bonus to referrer's wallet
+           
             let referrerWallet = await Wallet.findOne({ userId: user.referredBy });
             if (!referrerWallet) {
                 referrerWallet = new Wallet({
@@ -198,8 +196,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
                 });
             }
             await referrerWallet.save();
-            
-            // Add 200 INR to referrer's wallet
+           
             await referrerWallet.addTransaction({
                 id: `REF-${Date.now()}-${user.referredBy}`,
                 type: 'credit',
@@ -210,18 +207,16 @@ const verifyOtp = asyncHandler(async (req, res) => {
 
             await referrerWallet.save();
             
-            
-            
-            // Mark referral bonus as received
+
             user.referralBonusReceived = true;
             await user.save();
         } catch (error) {
             console.error('Error processing referral bonus:', error);
-            // Continue with verification even if bonus processing fails
+           
         }
     }
 
-    // Generate token after successful verification
+
     generateToken(res, user._id);
 
     res.status(HTTP_STATUS.OK).json({ 

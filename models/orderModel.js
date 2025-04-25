@@ -5,7 +5,7 @@ const orderSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
-        match: /^ORD-\d{5}$/,  // Validates format: ORD-XXXXX (where X is a digit)
+        match: /^ORD-\d{5}$/,  
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,
@@ -105,7 +105,6 @@ const orderSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Create indexes for common search and filter operations
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ user: 1 });
