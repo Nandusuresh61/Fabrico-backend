@@ -539,6 +539,15 @@ export const editProductName = async (req, res) => {
       });
     }
 
+    const specialCharsOnly = /^[^a-zA-Z0-9]+$/.test(name.trim());
+    const underscoresOnly = /^[_]+$/.test(name.trim());
+    
+    if (specialCharsOnly || underscoresOnly) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        message: 'Product name must contain at least one letter ' 
+      });
+    }
+
     const existingProduct = await Product.findOne({ 
       _id: { $ne: productId }, 
       name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
