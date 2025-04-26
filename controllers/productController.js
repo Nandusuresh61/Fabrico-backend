@@ -143,7 +143,7 @@ export const addProduct = async (req, res) => {
 export const editProduct = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
-    const { color, price, stock, discountPrice } = req.body;
+    const { color, price, stock, discountPrice, brand, category } = req.body;
     
     // Parse existing images with error handling
     let existingImages = [];
@@ -159,6 +159,9 @@ export const editProduct = async (req, res) => {
     if (!product) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Product not found' });
     }
+    if (brand) product.brand = brand;
+    if (category) product.category = category;
+    await product.save();
 
     const variant = await Variant.findById(variantId);
     if (!variant) {
@@ -223,8 +226,17 @@ export const editProduct = async (req, res) => {
 
     await variant.save();
 
+    const updatedProduct = await Product.findById(productId)
+      .populate('category', 'name status')
+      .populate('brand', 'name status')
+      .populate({
+        path: 'variants',
+        select: 'color stock price discountPrice mainImage subImages isBlocked'
+      });
+
     res.status(HTTP_STATUS.OK).json({ 
       message: 'Variant updated successfully', 
+      product: updatedProduct,
       productId,
       variantId,
       variant 
