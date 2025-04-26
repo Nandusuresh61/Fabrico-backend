@@ -6,20 +6,35 @@ import { HTTP_STATUS } from "../utils/httpStatus.js";
 const addCategory = asyncHandler(async (req, res) => {
     const { name } = req.body;
 
-    if (!name) {
+    if (!name || !name.trim()) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name is required' });
     }
 
-    
+    if (/^[^a-zA-Z0-9]+$/.test(name.trim()) || /^[_]+$/.test(name.trim())) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name must contain at least one letter or number' });
+    }
+
+    if (name.trim().length < 3) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name must be at least 3 characters long' });
+    }
+
+    if (name.trim().length > 50) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name cannot exceed 50 characters' });
+    }
+
+    if (!/^[a-zA-Z0-9\s-&]+$/.test(name.trim())) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name can only contain letters, numbers, spaces, hyphens, and ampersands' });
+    }
+
     const existingCategory = await Category.findOne({ 
-        name: { $regex: new RegExp(`^${name}$`, 'i') }
+        name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }     
     });
     
     if (existingCategory) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name already exists' });
     }
 
-    const category = new Category({ name });
+    const category = new Category({ name: name.trim() });
     await category.save();
 
     res.status(HTTP_STATUS.CREATED).json({ message: 'Category added successfully', category });
@@ -30,23 +45,43 @@ const editCategory = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { name } = req.body;
 
-    const category = await Category.findById(id);
+    if (!name || !name.trim()) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name is required' });
+    }
+
+    if (/^[^a-zA-Z0-9]+$/.test(name.trim()) || /^[_]+$/.test(name.trim())) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name must contain at least one letter or number' });
+    }
+
+    if (name.trim().length < 3) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name must be at least 3 characters long' });
+    }
+
+    if (name.trim().length > 50) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name cannot exceed 50 characters' });
+    }
+
+
+    if (!/^[a-zA-Z0-9\s-&]+$/.test(name.trim())) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name can only contain letters, numbers, spaces, hyphens, and ampersands' });
+    }
+
+    const category = await Category.findById(id); 
 
     if (!category) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category not found' });
     }
 
-    
     const existingCategory = await Category.findOne({
         _id: { $ne: id },
-        name: { $regex: new RegExp(`^${name}$`, 'i') }
+        name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
     });
 
     if (existingCategory) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category name already exists' });
     }
 
-    category.name = name || category.name;
+    category.name = name.trim();
     await category.save();
 
     res.status(HTTP_STATUS.OK).json({ message: 'Category updated successfully', category });
