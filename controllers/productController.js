@@ -2,6 +2,7 @@ import Product from '../models/productModel.js';
 import cloudinary from '../config/cloudinary.js';
 import Variant from '../models/varientModel.js';
 import Category from '../models/categoryModel.js';
+import Brand from '../models/brandModel.js';
 import { HTTP_STATUS } from '../utils/httpStatus.js';
 
 
@@ -145,6 +146,22 @@ export const editProduct = async (req, res) => {
     const { productId, variantId } = req.params;
     const { color, price, stock, discountPrice, brand, category } = req.body;
     
+    if (!color?.trim()) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Color is required' });
+    }
+
+    if (!price || price <= 0) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Price must be greater than 0' });
+    }
+
+    if (stock === undefined || stock < 0) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Stock must be 0 or greater' });
+    }
+
+    if (discountPrice && (discountPrice >= price || discountPrice <= 0)) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Discount price must be less than regular price and greater than 0' });
+    }
+
     // Parse existing images with error handling
     let existingImages = [];
     try {
@@ -154,13 +171,41 @@ export const editProduct = async (req, res) => {
       existingImages = [];
     }
 
+    // Validate total images (existing + new)
+    const newImagesCount = req.files?.length || 0;
+    const totalImages = existingImages.length + newImagesCount;
+
+    if (totalImages === 0) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'At least one image is required' });
+    }
+
+    if (totalImages > 3) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Maximum 3 images are allowed' });
+    }
+
     // Find the product and variant
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Product not found' });
     }
-    if (brand) product.brand = brand;
-    if (category) product.category = category;
+
+    // Validate brand and category if provided
+    if (brand) {
+      const brandExists = await Brand.findById(brand);
+      if (!brandExists) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Invalid brand' });
+      }
+      product.brand = brand;
+    }
+
+    if (category) {
+      const categoryExists = await Category.findById(category);
+      if (!categoryExists) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Invalid category' });
+      }
+      product.category = category;
+    }
+
     await product.save();
 
     const variant = await Variant.findById(variantId);
