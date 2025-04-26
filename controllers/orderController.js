@@ -488,25 +488,24 @@ export const cancelOrderForUser = asyncHandler(async (req, res) => {
 
 export const generateInvoice = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id)
-        .populate('user', 'username email')
-        .populate('items.product', 'name price brand category')
-        .populate('items.variant', 'name sku mainImage subImages color size')
-        .populate('shippingAddress');
+    .populate('user', 'username email')
+    .populate({
+        path: 'items.product',
+        select: 'name price brand category'
+    })
+    .populate('items.variant', 'color price');
 
-    if (!order) {
-        res.status(HTTP_STATUS.NOT_FOUND);
-        throw new Error('Order not found');
-    }
+if (!order) {
+    res.status(HTTP_STATUS.NOT_FOUND);
+    throw new Error('Order not found');
+}
 
-   
-    const doc = new PDFDocument();
-    
-    
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
-    
-    
-    doc.pipe(res);
+const doc = new PDFDocument();
+
+res.setHeader('Content-Type', 'application/pdf');
+res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
+
+doc.pipe(res);
 
     
     doc.fontSize(20).text('FABRICO', { align: 'center' });
@@ -554,10 +553,9 @@ export const generateInvoice = asyncHandler(async (req, res) => {
     // Add items
     order.items.forEach(item => {
         currentY = doc.y;
-        doc.text(item.product.name, startX, currentY);
-        if (item.variant) {
-            doc.fontSize(10).text(`Variant: ${item.variant.name}`, startX, currentY + 15);
-        }
+        const productName = item.product.name;
+        const variantInfo = item.variant ? `(${item.variant.color})` : '';
+        doc.text(`${productName} ${variantInfo}`, startX, currentY);
         doc.fontSize(12).text(item.quantity.toString(), startX + 200, currentY);
         doc.text(`₹${item.price.toFixed(2)}`, startX + 300, currentY);
         doc.text(`₹${(item.price * item.quantity).toFixed(2)}`, startX + 400, currentY);
