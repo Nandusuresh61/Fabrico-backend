@@ -522,8 +522,23 @@ export const googleAuthController = asyncHandler(async (req, res) => {
 const sendEmailUpdateOtp = asyncHandler(async (req, res) => {
     const { newEmail } = req.body;
     const userId = req.user._id;
+    if (!newEmail) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Email is required.' 
+        });
+    }
 
-    // Check if email already exists
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Please enter a valid email address.' 
+        });
+    }
+
+    if (newEmail.length > 254) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Email address is too long.' 
+        });
+    }
     const emailExists = await User.findOne({ email: newEmail });
     if (emailExists) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Email already exists.' });
@@ -579,6 +594,27 @@ const verifyEmailUpdateOtp = asyncHandler(async (req, res) => {
 const updateUserProfile = asyncHandler(async (req, res) => {
     const { username, phone, profileImage } = req.body;
     const userId = req.user._id;
+    if (username) {
+        if (username.length < 3) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+                message: 'Username must be at least 3 characters long' 
+            });
+        }
+        
+        if (!/^[a-zA-Z\s]+$/.test(username)) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+                message: 'Username can only contain letters and spaces' 
+            });
+        }
+    }
+
+    if (phone) {
+        if (!/^\d{10}$/.test(phone) || /^0{10}$/.test(phone)) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+                message: 'Please enter a valid 10-digit phone number' 
+            });
+        }
+    }
 
     const user = await User.findById(userId);
     if (!user) {
