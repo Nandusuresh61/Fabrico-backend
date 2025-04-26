@@ -527,6 +527,29 @@ export const editProductName = async (req, res) => {
     const { productId } = req.params;
     const { name } = req.body;
 
+    if (!name || name.trim().length === 0) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        message: 'Product name is required' 
+      });
+    }
+
+    if (name.length < 3 || name.length > 100) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        message: 'Product name must be between 3 and 100 characters' 
+      });
+    }
+
+    const existingProduct = await Product.findOne({ 
+      _id: { $ne: productId }, 
+      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
+    });
+
+    if (existingProduct) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        message: 'A product with this name already exists' 
+      });
+    }
+
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Product not found' });
