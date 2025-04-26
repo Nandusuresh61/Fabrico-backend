@@ -13,6 +13,47 @@ export const addProduct = async (req, res) => {
     if (!name || !description || !category || !brand || !variants || !Array.isArray(variants) || variants.length === 0) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Missing required fields' });
     }
+    if (!name?.trim()) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Product name is required' });
+    }
+    if (name.length < 3 || name.length > 100) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Product name must be between 3 and 100 characters' });
+    }
+
+    if (!description?.trim()) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Product description is required' });
+    }
+    if (description.length < 10 || description.length > 1000) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Description must be between 10 and 1000 characters' });
+    }
+
+    if (!category) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Category is required' });
+    }
+    if (!brand) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand is required' });
+    }
+
+    // Validate variants
+    if (!variants || !Array.isArray(variants) || variants.length === 0) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'At least one variant is required' });
+    }
+
+    // Validate each variant
+    for (const [index, variant] of variants.entries()) {
+      if (!variant.color?.trim()) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: `Color is required for variant ${index + 1}` });
+      }
+      if ( variant.quantity < 0) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: `Invalid quantity for variant ${index + 1}` });
+      }
+      if (!variant.price || variant.price <= 0) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: `Invalid price for variant ${index + 1}` });
+      }
+      if (variant.discountPrice && (variant.discountPrice >= variant.price || variant.discountPrice <= 0)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: `Invalid discount price for variant ${index + 1}` });
+      }
+    }
 
     // Check if files are provided
     if (!req.files || req.files.length === 0) {
