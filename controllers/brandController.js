@@ -49,14 +49,36 @@ export const getBrands = asyncHandler(async (req, res) => {
 export const createBrand = asyncHandler(async (req, res) => {
     const { name } = req.body;
 
-    const brandExists = await Brand.findOne({ name });
+    if (!name || !name.trim()) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand name is required' });
+    }
+
+    if (/^[^a-zA-Z0-9]+$/.test(name.trim()) || /^[_]+$/.test(name.trim())) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand name must contain at least one letter or number' });
+    }
+
+    if (name.trim().length < 3) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand name must be at least 3 characters long' });
+    }
+
+    if (name.trim().length > 50) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand name cannot exceed 50 characters' });
+    }
+
+    if (!/^[a-zA-Z0-9\s-&]+$/.test(name.trim())) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand name can only contain letters, numbers, spaces, hyphens, and ampersands' });
+    }
+
+    const brandExists = await Brand.findOne({ 
+        name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }     
+    });
+    
     if (brandExists) {
-        res.status(HTTP_STATUS.BAD_REQUEST);
-        throw new Error('Brand already exists');
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand name already exists' });
     }
 
     const brand = await Brand.create({
-        name,
+        name: name.trim(),
     });
 
     if (brand) {
@@ -67,19 +89,47 @@ export const createBrand = asyncHandler(async (req, res) => {
     }
 });
 
-
 export const updateBrand = asyncHandler(async (req, res) => {
+    const { name } = req.body;
+    
+    if (!name || !name.trim()) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand name is required' });
+    }
+
+    if (/^[^a-zA-Z0-9]+$/.test(name.trim()) || /^[_]+$/.test(name.trim())) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand name must contain at least one letter or number' });
+    }
+
+    if (name.trim().length < 3) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand name must be at least 3 characters long' });
+    }
+
+    if (name.trim().length > 50) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand name cannot exceed 50 characters' });
+    }
+
+    if (!/^[a-zA-Z0-9\s-&]+$/.test(name.trim())) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand name can only contain letters, numbers, spaces, hyphens, and ampersands' });
+    }
+
     const brand = await Brand.findById(req.params.id);
 
-    if (brand) {
-        brand.name = req.body.name || brand.name;
-
-        const updatedBrand = await brand.save();
-        res.json(updatedBrand);
-    } else {
-        res.status(HTTP_STATUS.NOT_FOUND);
-        throw new Error('Brand not found');
+    if (!brand) {
+        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: 'Brand not found' });
     }
+
+    const existingBrand = await Brand.findOne({
+        _id: { $ne: req.params.id },
+        name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
+    });
+
+    if (existingBrand) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand name already exists' });
+    }
+
+    brand.name = name.trim();
+    const updatedBrand = await brand.save();
+    res.json(updatedBrand);
 });
 
 
