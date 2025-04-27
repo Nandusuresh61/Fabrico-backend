@@ -186,26 +186,64 @@ export const updateCoupon = asyncHandler(async (req, res) => {
     });
   }
 
-  if (code && code !== coupon.couponCode) {
-    const existingCoupon = await Coupon.findOne({
-      _id: { $ne: couponId },
-      $or: [
-        { couponCode: { $regex: new RegExp(`^${code}$`, 'i') } },
-        { code: { $regex: new RegExp(`^${code}$`, 'i') } }
-      ]
+  // Validate discount type and value
+  if (discountType && !['percentage', 'fixed'].includes(discountType)) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Invalid discount type. Must be either percentage or fixed'
     });
-
-    if (existingCoupon) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
-        message: 'Coupon code already exists' 
-      });
-    }
   }
 
-  if (discountType === 'percentage' && (discountValue <= 0 || discountValue > 100)) {
+  if (discountType === 'percentage' && discountValue && (discountValue <= 0 || discountValue > 100)) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
       message: 'Percentage discount must be between 0 and 100' 
     });
+  }
+
+  if (discountType === 'fixed' && discountValue && discountValue <= 0) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Fixed discount amount must be greater than 0'
+    });
+  }
+
+  // Validate minimum amount
+  if (minimumAmount && minimumAmount <= 0) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Minimum amount cannot be negative'
+    });
+  }
+
+  if (discountType === 'fixed' && minimumAmount && discountValue >= minimumAmount) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Fixed discount amount must be less than minimum order amount'
+    });
+  }
+
+  // Process dates if provided
+  let processedStartDate = startDate ? new Date(startDate) : coupon.startDate;
+  let processedEndDate = endDate ? new Date(endDate) : coupon.endDate;
+
+  if (startDate || endDate) {
+    if (isNaN(processedStartDate.getTime()) || isNaN(processedEndDate.getTime())) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        message: 'Invalid date format'
+      });
+    }
+
+    processedStartDate.setHours(0, 0, 0, 0);
+    processedEndDate.setHours(0, 0, 0, 0);
+
+    if (processedEndDate <= processedStartDate) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        message: 'End date must be after start date' 
+      });
+    }
+
+    const maxDuration = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
+    if (processedEndDate - processedStartDate > maxDuration) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        message: 'Coupon duration cannot exceed 1 year'
+      });
+    }
   }
 
   const updatedCoupon = await Coupon.findByIdAndUpdate(
@@ -217,8 +255,9 @@ export const updateCoupon = asyncHandler(async (req, res) => {
       discountType: discountType || coupon.discountType,
       discountValue: discountValue || coupon.discountValue,
       minOrderAmount: minimumAmount || coupon.minOrderAmount,
-      startDate: startDate || coupon.startDate,
-      endDate: endDate || coupon.endDate
+      startDate: processedStartDate,
+      endDate: processedEndDate,
+      isExpired: false // Reset expired status on update
     },
     { new: true }
   );
