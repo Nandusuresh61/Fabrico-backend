@@ -5,13 +5,22 @@ import { HTTP_STATUS } from '../utils/httpStatus.js';
 export const createCoupon = asyncHandler(async (req, res) => {
   const { code, description, discountType, discountValue, minimumAmount, startDate, endDate } = req.body;
 
+  // Basic field validation
   if (!code || !description || !discountType || !discountValue || !minimumAmount || !startDate || !endDate) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
       message: 'All fields are required' 
     });
   }
 
-  // Check for existing coupon using both field names
+  // Validate coupon code format
+  const codeRegex = /^[A-Z0-9]{6,12}$/;
+  if (!codeRegex.test(code.toUpperCase())) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Coupon code must be 6-12 characters long and contain only uppercase letters and numbers'
+    });
+  }
+
+  // Check for existing coupon with case-insensitive comparison
   const existingCoupon = await Coupon.findOne({ 
     $or: [
       { couponCode: { $regex: new RegExp(`^${code}$`, 'i') } },
@@ -25,10 +34,45 @@ export const createCoupon = asyncHandler(async (req, res) => {
     });
   }
 
-  // Validate discount value
-  if (discountType === 'percentage' && (discountValue <= 0 || discountValue > 100)) {
-    return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
-      message: 'Percentage discount must be between 0 and 100' 
+  // Validate description length
+  if (description.length < 10 || description.length > 200) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Description must be between 10 and 200 characters'
+    });
+  }
+
+  // Validate discount type
+  if (!['percentage', 'fixed'].includes(discountType)) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Invalid discount type. Must be either percentage or fixed'
+    });
+  }
+
+  // Validate discount value based on type
+  if (discountType === 'percentage') {
+    if (discountValue <= 0 || discountValue > 100) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        message: 'Percentage discount must be between 0 and 100' 
+      });
+    }
+  } else {
+    if (discountValue <= 0) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        message: 'Fixed discount amount must be greater than 0'
+      });
+    }
+  }
+
+  // Validate minimum amount
+  if (minimumAmount < 0) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Minimum amount cannot be negative'
+    });
+  }
+
+  if (discountType === 'fixed' && discountValue >= minimumAmount) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Fixed discount amount must be less than minimum order amount'
     });
   }
 
@@ -36,6 +80,12 @@ export const createCoupon = asyncHandler(async (req, res) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
   const now = new Date();
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Invalid date format'
+    });
+  }
 
   start.setHours(0, 0, 0, 0);
   now.setHours(0, 0, 0, 0);
@@ -52,9 +102,18 @@ export const createCoupon = asyncHandler(async (req, res) => {
     });
   }
 
+  // Calculate maximum duration (e.g., 1 year)
+  const maxDuration = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
+  if (end - start > maxDuration) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Coupon duration cannot exceed 1 year'
+    });
+  }
+
+  // Create coupon if all validations pass
   const coupon = await Coupon.create({
     couponCode: code.toUpperCase(),
-    code: code.toUpperCase(), // Set both fields to ensure consistency
+    code: code.toUpperCase(),
     description,
     discountType,
     discountValue,
