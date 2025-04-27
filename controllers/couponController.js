@@ -12,7 +12,6 @@ export const createCoupon = asyncHandler(async (req, res) => {
     });
   }
 
-  // Validate coupon code format
   const codeRegex = /^[A-Z0-9]{6,12}$/;
   if (!codeRegex.test(code.toUpperCase())) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -20,7 +19,6 @@ export const createCoupon = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check for existing coupon with case-insensitive comparison
   const existingCoupon = await Coupon.findOne({ 
     $or: [
       { couponCode: { $regex: new RegExp(`^${code}$`, 'i') } },
@@ -34,21 +32,18 @@ export const createCoupon = asyncHandler(async (req, res) => {
     });
   }
 
-  // Validate description length
   if (description.length < 10 || description.length > 200) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
       message: 'Description must be between 10 and 200 characters'
     });
   }
 
-  // Validate discount type
   if (!['percentage', 'fixed'].includes(discountType)) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
       message: 'Invalid discount type. Must be either percentage or fixed'
     });
   }
 
-  // Validate discount value based on type
   if (discountType === 'percentage') {
     if (discountValue <= 0 || discountValue > 100) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
@@ -63,8 +58,7 @@ export const createCoupon = asyncHandler(async (req, res) => {
     }
   }
 
-  // Validate minimum amount
-  if (minimumAmount < 0) {
+  if (minimumAmount <= 0) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
       message: 'Minimum amount cannot be negative'
     });
@@ -76,7 +70,6 @@ export const createCoupon = asyncHandler(async (req, res) => {
     });
   }
 
-  // Validate dates
   const start = new Date(startDate);
   const end = new Date(endDate);
   const now = new Date();
@@ -102,7 +95,6 @@ export const createCoupon = asyncHandler(async (req, res) => {
     });
   }
 
-  // Calculate maximum duration (e.g., 1 year)
   const maxDuration = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
   if (end - start > maxDuration) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -110,7 +102,6 @@ export const createCoupon = asyncHandler(async (req, res) => {
     });
   }
 
-  // Create coupon if all validations pass
   const coupon = await Coupon.create({
     couponCode: code.toUpperCase(),
     code: code.toUpperCase(),
