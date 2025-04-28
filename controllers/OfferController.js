@@ -9,7 +9,6 @@ import { HTTP_STATUS } from "../utils/httpStatus.js";
 
 const applyOfferDiscount = async (offer) => {
   if (offer.offerType === "product") {
-    // For product offers
     for (const productId of offer.items) {
       const variants = await Variant.find({ product: productId });
       for (const variant of variants) {
@@ -91,17 +90,21 @@ export const createOffer = asyncHandler(async (req, res) => {
     throw new Error("Offer end date cannot be before start date");
   }
 
-  const existingOffer = await Offer.find({
+  // Find existing offers and deactivate them
+  const existingOffers = await Offer.find({
     items: { $in: items },
     isActive: true,
     startDate: { $lte: endDate },
     endDate: { $gte: startDate },
   });
 
-  if (existingOffer.length > 0) {
-    res.status(HTTP_STATUS.BAD_REQUEST);
-    throw new Error(
-      "An active offer already exists for one or more selected items"
+  // Deactivate existing offers
+  if (existingOffers.length > 0) {
+    await Promise.all(
+      existingOffers.map(async (existingOffer) => {
+        existingOffer.isActive = false;
+        await existingOffer.save();
+      })
     );
   }
 
