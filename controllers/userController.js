@@ -410,6 +410,48 @@ const resetPassword = asyncHandler(async (req, res) => {
 const changePassword = asyncHandler(async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user._id;
+    if (!currentPassword || !newPassword) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Current password and new password are required.' 
+        });
+    }
+
+  
+    const passwordRegex = {
+        minLength: /.{8,}/,
+        lowercase: /[a-z]/,
+        uppercase: /[A-Z]/,
+        number: /[0-9]/,
+        special: /[!@#$%^&*(),.?":{}|<>]/
+    };
+
+    const passwordRequirements = [
+        { test: passwordRegex.minLength, message: 'Password must be at least 8 characters long' },
+        { test: passwordRegex.lowercase, message: 'Password must contain at least one lowercase letter' },
+        { test: passwordRegex.uppercase, message: 'Password must contain at least one uppercase letter' },
+        { test: passwordRegex.number, message: 'Password must contain at least one number' },
+        { test: passwordRegex.special, message: 'Password must contain at least one special character' }
+    ];
+
+    const failedRequirements = passwordRequirements
+        .filter(req => !req.test.test(newPassword))
+        .map(req => req.message);
+
+    if (failedRequirements.length > 0) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+            message: 'Password does not meet requirements',
+            errors: failedRequirements
+        });
+    }
+
+   
+    if (currentPassword === newPassword) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+            message: 'New password must be different from current password'
+        });
+    }
+
+    
 
     const user = await User.findById(userId);
     if (!user) {
