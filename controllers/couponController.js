@@ -228,6 +228,17 @@ export const updateCoupon = asyncHandler(async (req, res) => {
         message: 'Invalid date format'
       });
     }
+    processedStartDate = new Date(Date.UTC(
+      processedStartDate.getFullYear(),
+      processedStartDate.getMonth(),
+      processedStartDate.getDate()
+    ));
+    
+    processedEndDate = new Date(Date.UTC(
+      processedEndDate.getFullYear(),
+      processedEndDate.getMonth(),
+      processedEndDate.getDate()
+    ));
 
     processedStartDate.setHours(0, 0, 0, 0);
     processedEndDate.setHours(0, 0, 0, 0);
