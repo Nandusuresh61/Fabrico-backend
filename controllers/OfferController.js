@@ -7,7 +7,7 @@ import { HTTP_STATUS } from "../utils/httpStatus.js";
 
 // Helper function
 
-const applyOfferDiscount = async (offer) => {
+export const applyOfferDiscount = async (offer) => {
   if (offer.offerType === "product") {
     for (const productId of offer.items) {
       const variants = await Variant.find({ product: productId });
