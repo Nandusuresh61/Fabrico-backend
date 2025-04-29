@@ -10,7 +10,6 @@ export const addProduct = async (req, res) => {
   try {
     const { name, description, category, brand, variants } = JSON.parse(req.body.data);
 
-    // Validate required fields
     if (!name || !description || !category || !brand || !variants || !Array.isArray(variants) || variants.length === 0) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Missing required fields' });
     }
@@ -35,12 +34,10 @@ export const addProduct = async (req, res) => {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Brand is required' });
     }
 
-    // Validate variants
     if (!variants || !Array.isArray(variants) || variants.length === 0) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'At least one variant is required' });
     }
 
-    // Validate each variant
     for (const [index, variant] of variants.entries()) {
       if (!variant.color?.trim()) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: `Color is required for variant ${index + 1}` });
@@ -56,12 +53,10 @@ export const addProduct = async (req, res) => {
       }
     }
 
-    // Check if files are provided
     if (!req.files || req.files.length === 0) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'At least one image is required' });
     }
 
-    // Count total images needed (3 per variant)
     const totalImagesNeeded = variants.length * 3;
     if (req.files.length < totalImagesNeeded) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: `At least ${totalImagesNeeded} images are required (3 per variant)` });
@@ -104,13 +99,19 @@ export const addProduct = async (req, res) => {
         })
       );
 
+      let discountPrice = variant.discountPrice || null;
+      if (activeOffer) {
+        const discountAmount = (variant.price * activeOffer.discountPercentage) / 100;
+        discountPrice = Math.round(variant.price - discountAmount);
+      }
+
       // Create variant with images
       const newVariant = new Variant({
         product: product._id,
         color: variant.color,
         stock: variant.quantity,
         price: variant.price,
-        discountPrice: variant.discountPrice || null,
+        discountPrice: discountPrice,
         mainImage: imageUrls[0],
         subImages: imageUrls.slice(1)
       });
