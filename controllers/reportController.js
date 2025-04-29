@@ -26,7 +26,8 @@ export const getSalesReport = asyncHandler(async (req, res) => {
   const [result] = await Order.aggregate([
     {
       $match: {
-        createdAt: { $gte: start, $lte: end }
+        createdAt: { $gte: start, $lte: end },
+        status: { $ne: 'cancelled' }
       }
     },
     {
