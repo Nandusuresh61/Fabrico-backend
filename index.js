@@ -21,10 +21,12 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import { initCronJobs } from './utils/cronJobs.js';
 dotenv.config();
 import connectDB from './config/db.js';
 
 connectDB();
+initCronJobs();
 const port = process.env.PORT || 5000;
 
 
