@@ -17,6 +17,12 @@ const authenticate = asyncHandler(async (req, res, next) => {
         if (!req.user) {
             return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: 'User not found, authentication failed.' });
         }
+        if (req.user.status === 'blocked') {
+            return res.status(HTTP_STATUS.FORBIDDEN).json({ 
+                message: 'Your account has been blocked. Please contact support.',
+                isBlocked: true
+            });
+        }
 
         next();
     } catch (error) {
