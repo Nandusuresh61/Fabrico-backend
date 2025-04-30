@@ -34,6 +34,65 @@ const createUser = asyncHandler(async (req, res) => {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Please fill all required fields.' });
     }
 
+    // Username validation
+    if (username.length < 3 || username.length > 30) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Username must be between 3 and 30 characters long'
+        });
+    }
+    if (!/^[a-zA-Z\s]+$/.test(username)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Username can only contain letters and spaces'
+        });
+    }
+
+    // Email validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Please enter a valid email address'
+        });
+    }
+    if (email.length > 254) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Email address is too long'
+        });
+    }
+
+    // Phone validation
+    if (!/^\d{10}$/.test(phone) || /^0{10}$/.test(phone)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Please enter a valid 10-digit phone number'
+        });
+    }
+
+    // Password validation
+    const passwordRegex = {
+        minLength: /.{8,}/,
+        lowercase: /[a-z]/,
+        uppercase: /[A-Z]/,
+        number: /[0-9]/,
+        special: /[!@#$%^&*(),.?":{}|<>]/
+    };
+
+    const passwordRequirements = [
+        { test: passwordRegex.minLength, message: 'Password must be at least 8 characters long' },
+        { test: passwordRegex.lowercase, message: 'Password must contain at least one lowercase letter' },
+        { test: passwordRegex.uppercase, message: 'Password must contain at least one uppercase letter' },
+        { test: passwordRegex.number, message: 'Password must contain at least one number' },
+        { test: passwordRegex.special, message: 'Password must contain at least one special character' }
+    ];
+
+    const failedRequirements = passwordRequirements
+        .filter(req => !req.test.test(password))
+        .map(req => req.message);
+
+    if (failedRequirements.length > 0) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+            message: 'Password does not meet requirements',
+            errors: failedRequirements
+        });
+    }
+
     const userExists = await User.findOne({ email });
     if (userExists && userExists.isVerified) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'User already exists.' });
@@ -268,9 +327,37 @@ const resendOtp = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
+    // Enhanced validation
+    if (!email || !password) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Email and password are required.' 
+        });
+    }
+
+    // Email validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Please enter a valid email address'
+        });
+    }
+    if (email.length > 254) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Email address is too long'
+        });
+    }
+
+    // Password length validation
+    if (password.length < 8) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Password must be at least 8 characters long'
+        });
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
-        return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: 'Invalid email or password.' });
+        return res.status(HTTP_STATUS.UNAUTHORIZED).json({ 
+            message: 'Invalid email or password.' 
+        });
     }
 
     // Check if user is blocked
@@ -292,7 +379,9 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-        return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: 'Invalid email or password.' });
+        return res.status(HTTP_STATUS.UNAUTHORIZED).json({ 
+            message: 'Invalid email or password.' 
+        });
     }
 
     generateToken(res, user._id);
