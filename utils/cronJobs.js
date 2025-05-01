@@ -32,6 +32,7 @@ export const initCronJobs = () => {
       for (const offer of expiredOffers) {
         offer.isActive = false;
         await offer.save();
+        await resetVariantDiscounts(offer);
       }
     } catch (error) {
       console.error('Error in offer cron job:', error);

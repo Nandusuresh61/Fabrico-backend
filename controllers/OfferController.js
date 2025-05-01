@@ -5,7 +5,61 @@ import Variant from "../models/varientModel.js";
 import { HTTP_STATUS } from "../utils/httpStatus.js";
 
 
-// Helper function
+export const resetVariantDiscounts = async (offer) => {
+  if (offer.offerType === "product") {
+    for (const productId of offer.items) {
+      const variants = await Variant.find({ product: productId });
+      for (const variant of variants) {
+        // Check if there's still an active category offer
+        const product = await Product.findById(productId);
+        const categoryOffer = await Offer.findOne({
+          offerType: "category",
+          items: product.category,
+          isActive: true,
+          startDate: { $lte: new Date() },
+          endDate: { $gte: new Date() }
+        });
+
+        if (categoryOffer) {
+          // Apply only category offer
+          const discountAmount = (variant.price * categoryOffer.discountPercentage) / 100;
+          variant.discountPrice = Math.round(variant.price - discountAmount);
+        } else {
+          // No active offers, reset discount price
+          variant.discountPrice = null;
+        }
+        await variant.save();
+      }
+    }
+  } else { // For category offers
+    for (const categoryId of offer.items) {
+      const products = await Product.find({ category: categoryId });
+      for (const product of products) {
+        const variants = await Variant.find({ product: product._id });
+        for (const variant of variants) {
+          // Check if there's still an active product offer
+          const productOffer = await Offer.findOne({
+            offerType: "product",
+            items: product._id,
+            isActive: true,
+            startDate: { $lte: new Date() },
+            endDate: { $gte: new Date() }
+          });
+
+          if (productOffer) {
+            // Apply only product offer
+            const discountAmount = (variant.price * productOffer.discountPercentage) / 100;
+            variant.discountPrice = Math.round(variant.price - discountAmount);
+          } else {
+            // No active offers, reset discount price
+            variant.discountPrice = null;
+          }
+          await variant.save();
+        }
+      }
+    }
+  }
+};
 
 export const applyOfferDiscount = async (offer) => {
   if (offer.offerType === "product") {
