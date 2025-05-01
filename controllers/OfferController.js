@@ -323,45 +323,36 @@ export const updateOffer = asyncHandler(async (req, res) => {
 });
 
 export const toggleOfferStatus = asyncHandler(async (req, res) => {
-    const offer = await Offer.findById(req.params.offerId);
-    
-    if (!offer) {
-      res.status(HTTP_STATUS.NOT_FOUND);
-      throw new Error("Offer not found");
-    }
+  const offer = await Offer.findById(req.params.offerId);
   
-    // If deactivating, remove discounts
-    if (offer.isActive) {
-      if (offer.offerType === "product") {
-        for (const productId of offer.items) {
-          const variants = await Variant.find({ product: productId });
-          for (const variant of variants) {
-            variant.discountPrice = null;
-            await variant.save();
-          }
-        }
-      } else {
-        for (const categoryId of offer.items) {
-          const products = await Product.find({ category: categoryId });
-          for (const product of products) {
-            const variants = await Variant.find({ product: product._id });
-            for (const variant of variants) {
-              variant.discountPrice = null;
-              await variant.save();
-            }
-          }
-        }
-      }
-    } else {
-      // If activating, apply discounts
-      await applyOfferDiscount(offer);
-    }
-  
-    offer.isActive = !offer.isActive;
-    const updatedOffer = await offer.save();
-    
-    res.json({ message: "Offer status updated", offer: updatedOffer });
+  if (!offer) {
+    return res.status(HTTP_STATUS.NOT_FOUND).json({
+      message: 'Offer not found'
+    });
+  }
+
+  // Check if offer is expired
+  const now = new Date();
+  if (offer.endDate < now) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Cannot toggle status of expired offer'
+    });
+  }
+
+  offer.isActive = !offer.isActive;
+  await offer.save();
+
+  if (offer.isActive) {
+    await applyOfferDiscount(offer);
+  } else {
+    await resetVariantDiscounts(offer);
+  }
+
+  res.status(HTTP_STATUS.OK).json({
+    message: 'Offer status updated successfully',
+    offer
   });
+});
 
 
 

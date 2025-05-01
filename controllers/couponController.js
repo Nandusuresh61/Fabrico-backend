@@ -295,18 +295,26 @@ export const updateCoupon = asyncHandler(async (req, res) => {
 
 export const toggleCouponStatus = asyncHandler(async (req, res) => {
   const coupon = await Coupon.findById(req.params.id);
-
+  
   if (!coupon) {
-    return res.status(HTTP_STATUS.NOT_FOUND).json({ 
-      message: 'Coupon not found' 
+    return res.status(HTTP_STATUS.NOT_FOUND).json({
+      message: 'Coupon not found'
     });
   }
 
-  coupon.isExpired = !coupon.isExpired;
+  // Check if coupon is expired
+  const now = new Date();
+  if (coupon.endDate < now || coupon.isExpired) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Cannot toggle status of expired coupon'
+    });
+  }
+
+  coupon.isActive = !coupon.isActive;
   await coupon.save();
 
-  res.json({
-    message: `Coupon ${coupon.isExpired ? 'deactivated' : 'activated'} successfully`,
+  res.status(HTTP_STATUS.OK).json({
+    message: 'Coupon status updated successfully',
     coupon
   });
 });
