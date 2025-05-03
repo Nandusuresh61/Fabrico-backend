@@ -4,7 +4,7 @@ import Variant from '../models/varientModel.js';
 import Category from '../models/categoryModel.js';
 import Brand from '../models/brandModel.js';
 import { HTTP_STATUS } from '../utils/httpStatus.js';
-
+import Offer from '../models/offerModel.js';
 
 export const addProduct = async (req, res) => {
   try {
@@ -71,6 +71,24 @@ export const addProduct = async (req, res) => {
     });
 
     await product.save();
+    const activeOffer = await Offer.findOne({
+      $or: [
+        {
+          offerType: "product",
+          items: product._id,
+          isActive: true,
+          startDate: { $lte: new Date() },
+          endDate: { $gte: new Date() }
+        },
+        {
+          offerType: "category",
+          items: category,
+          isActive: true,
+          startDate: { $lte: new Date() },
+          endDate: { $gte: new Date() }
+        }
+      ]
+    });
 
     
     const variantPromises = variants.map(async (variant, index) => {
