@@ -139,6 +139,12 @@ const createUser = asyncHandler(async (req, res) => {
     });
     
     await newUser.save();
+    const wallet = new Wallet({
+        userId: newUser._id,
+        balance: 0,
+        currency: 'INR'
+    });
+    await wallet.save();
 
     
     await sendOtpEmail(email, otp);
