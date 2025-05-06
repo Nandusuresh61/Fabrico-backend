@@ -51,12 +51,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 
-// app.get('/api/csrf-token', csrfProtection, (req, res) => {
-//   res.json({ csrfToken: req.csrfToken() });
-// });
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
 
 
-// app.use('/api', csrfProtection);
+app.use('/api', csrfProtection);
 
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
