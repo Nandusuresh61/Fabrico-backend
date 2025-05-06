@@ -4,7 +4,7 @@ import {
   getAllOffers,
   updateOffer,
   toggleOfferStatus,
-} from "../controllers/offerController.js";
+} from "../controllers/OfferController.js";
 import { authenticate, authorizeAdmin } from '../middlewares/authMiddleWare.js';
 const router = express.Router();
 
