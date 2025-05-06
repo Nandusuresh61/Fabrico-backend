@@ -51,7 +51,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 
-app.get('/api/csrf-token', csrfProtection, (req, res) => {
+app.get('/api/csrf-token', (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
 });
 
