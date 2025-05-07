@@ -488,121 +488,226 @@ export const cancelOrderForUser = asyncHandler(async (req, res) => {
 
 export const generateInvoice = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id)
-    .populate('user', 'username email')
-    .populate({
-        path: 'items.product',
-        select: 'name price brand category'
-    })
-    .populate('items.variant', 'color price');
+        .populate('user', 'username email')
+        .populate({
+            path: 'items.product',
+            select: 'name price brand category'
+        })
+        .populate('items.variant', 'color price');
 
-if (!order) {
-    res.status(HTTP_STATUS.NOT_FOUND);
-    throw new Error('Order not found');
-}
+    if (!order) {
+        res.status(HTTP_STATUS.NOT_FOUND);
+        throw new Error('Order not found');
+    }
 
-const doc = new PDFDocument();
-
-res.setHeader('Content-Type', 'application/pdf');
-res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
-
-doc.pipe(res);
-
-    
-    doc.fontSize(20).text('FABRICO', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(12).text('123 Fashion Street', { align: 'center' });
-    doc.text('Kannur, Kerala 670702', { align: 'center' });
-    doc.text('Phone: +91 9645760466', { align: 'center' });
-    doc.text('Email: support@fabrico.com', { align: 'center' });
-    doc.moveDown();
-
-    // Add invoice details
-    doc.fontSize(16).text('INVOICE', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(12).text(`Invoice Number: ${order.orderId}`, { align: 'right' });
-    doc.text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`, { align: 'right' });
-    doc.moveDown();
-
-    // Add customer details
-    doc.fontSize(14).text('Customer Details', { underline: true });
-    doc.fontSize(12).text(`Name: ${order.user.username}`);
-    doc.text(`Email: ${order.user.email}`);
-    doc.text(`Phone: ${order.shippingAddress.phone}`);
-    doc.moveDown();
-
-    // Add shipping address
-    doc.fontSize(14).text('Shipping Address', { underline: true });
-    doc.fontSize(12).text(order.shippingAddress.name);
-    doc.text(order.shippingAddress.street);
-    doc.text(`${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.pincode}`);
-    doc.moveDown();
-
-    // Add order items
-    doc.fontSize(14).text('Order Items', { underline: true });
-    doc.moveDown();
-
-    // Table header
-    const startX = 50;
-    let currentY = doc.y;
-    doc.text('Item', startX, currentY);
-    doc.text('Quantity', startX + 200, currentY);
-    doc.text('Price', startX + 300, currentY);
-    doc.text('Total', startX + 400, currentY);
-    doc.moveDown();
-
-    // Add items
-    order.items.forEach(item => {
-        currentY = doc.y;
-        const productName = item.product.name;
-        const variantInfo = item.variant ? `(${item.variant.color})` : '';
-        doc.text(`${productName} ${variantInfo}`, startX, currentY);
-        doc.fontSize(12).text(item.quantity.toString(), startX + 200, currentY);
-        doc.text(`₹${item.price.toFixed(2)}`, startX + 300, currentY);
-        doc.text(`₹${(item.price * item.quantity).toFixed(2)}`, startX + 400, currentY);
-        doc.moveDown();
+    const doc = new PDFDocument({
+        size: 'A4',
+        margin: 50
     });
 
-    // Add order summary
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
+    doc.pipe(res);
+
+    // Define colors and styling
+    const colors = {
+        primary: '#2563eb',
+        secondary: '#64748b',
+        accent: '#f1f5f9',
+        border: '#e2e8f0'
+    };
+
+    // Add logo and company name
+    doc.fontSize(24)
+        .fillColor(colors.primary)
+        .text('FABRICO', { align: 'center' });
+    
+    // Add decorative line
+    doc.lineWidth(2)
+        .moveTo(50, doc.y + 10)
+        .lineTo(545, doc.y + 10)
+        .stroke(colors.primary);
+
     doc.moveDown();
-    currentY = doc.y;
-    doc.text('Subtotal:', startX + 300, currentY);
-    doc.text(`₹${(order.totalAmount - (order.shippingCost || 0) - (order.tax || 0)).toFixed(2)}`, startX + 400, currentY);
     
+    // Company details with styled box
+    doc.rect(50, doc.y, 495, 80)
+        .fillColor(colors.accent)
+        .fill();
+    
+    doc.fillColor(colors.secondary)
+        .fontSize(12)
+        .text('123 Fashion Street', { align: 'center' })
+        .text('Kannur, Kerala 670702', { align: 'center' })
+        .text('Phone: +91 9645760466', { align: 'center' })
+        .text('Email: support@fabrico.com', { align: 'center' });
+
+    doc.moveDown(2);
+
+    // Invoice header with background
+    doc.rect(50, doc.y, 495, 40)
+        .fillColor(colors.primary)
+        .fill();
+    
+    doc.fillColor('#FFFFFF')
+        .fontSize(16)
+        .text('INVOICE', 270, doc.y - 30);
+
+    doc.moveDown(2);
+
+    // Invoice details in a styled box
+    doc.rect(50, doc.y, 495, 50)
+        .fillColor(colors.accent)
+        .fill();
+
+    doc.fillColor(colors.secondary)
+        .fontSize(12)
+        .text(`Invoice Number: ${order.orderId}`, 60, doc.y - 40)
+        .text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`, 350, doc.y - 40);
+
+    doc.moveDown(3);
+
+    // Customer and shipping info in two columns
+    const customerStartY = doc.y;
+    
+    // Customer details column
+    doc.fontSize(14)
+        .fillColor(colors.primary)
+        .text('Customer Details', 50, customerStartY);
+    
+    doc.fontSize(12)
+        .fillColor(colors.secondary)
+        .text(`Name: ${order.user.username}`, 50, customerStartY + 25)
+        .text(`Email: ${order.user.email}`, 50, customerStartY + 45)
+        .text(`Phone: ${order.shippingAddress.phone}`, 50, customerStartY + 65);
+
+    // Shipping details column
+    doc.fontSize(14)
+        .fillColor(colors.primary)
+        .text('Shipping Address', 300, customerStartY);
+    
+    doc.fontSize(12)
+        .fillColor(colors.secondary)
+        .text(order.shippingAddress.name, 300, customerStartY + 25)
+        .text(order.shippingAddress.street, 300, customerStartY + 45)
+        .text(`${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.pincode}`, 300, customerStartY + 65);
+
+    doc.moveDown(5);
+
+    // Order items table with styled header
+    const tableTop = doc.y;
+    doc.rect(50, tableTop, 495, 30)
+        .fillColor(colors.primary)
+        .fill();
+
+    // Table headers
+    doc.fillColor('#FFFFFF')
+        .fontSize(11)
+        .text('Item', 60, tableTop + 10, { width: 180 })
+        .text('Quantity', 250, tableTop + 10, { width: 60, align: 'center' })
+        .text('Price', 350, tableTop + 10, { width: 80, align: 'right' })
+        .text('Total', 450, tableTop + 10, { width: 80, align: 'right' });
+
+    // Table rows with alternating background
+    let currentY = tableTop + 40;
+    order.items.forEach((item, index) => {
+        if (index % 2 === 0) {
+            doc.rect(50, currentY - 10, 495, 30)
+                .fillColor(colors.accent)
+                .fill();
+        }
+
+        doc.fillColor(colors.secondary)
+            .fontSize(10)
+            // Product name with proper width constraint
+            .text(`${item.product.name} ${item.variant ? `(${item.variant.color})` : ''}`, 
+                60, currentY, { width: 180, ellipsis: true })
+            // Centered quantity
+            .text(item.quantity.toString(), 
+                250, currentY, { width: 60, align: 'center' })
+            // Right-aligned price
+            .text(`RS : ${item.price.toFixed(2)}`, 
+                350, currentY, { width: 80, align: 'right' })
+            // Right-aligned total
+            .text(`RS : ${(item.price * item.quantity).toFixed(2)}`, 
+                450, currentY, { width: 80, align: 'right' });
+
+        currentY += 30;
+    });
+
+    // Summary section with styled box
+    doc.rect(300, currentY + 20, 245, 120)
+        .fillColor(colors.accent)
+        .fill();
+
+    currentY += 30;
+    doc.fillColor(colors.secondary)
+        .text('Subtotal:', 310, currentY)
+        .text(`RS : ${(order.totalAmount - (order.shippingCost || 0) - (order.tax || 0)).toFixed(2)}`, 450, currentY);
+
     if (order.shippingCost) {
-        currentY = doc.y;
-        doc.text('Shipping:', startX + 300, currentY);
-        doc.text(`₹${order.shippingCost.toFixed(2)}`, startX + 400, currentY);
+        currentY += 20;
+        doc.text('Shipping:', 310, currentY)
+            .text(`RS : ${order.shippingCost.toFixed(2)}`, 450, currentY);
     }
-    
+
     if (order.tax) {
-        currentY = doc.y;
-        doc.text('Tax:', startX + 300, currentY);
-        doc.text(`₹${order.tax.toFixed(2)}`, startX + 400, currentY);
+        currentY += 20;
+        doc.text('Tax:', 310, currentY)
+            .text(`RS : ${order.tax.toFixed(2)}`, 450, currentY);
     }
-    
-    if (order.discount) {
-        currentY = doc.y;
-        doc.text('Discount:', startX + 300, currentY);
-        doc.text(`-₹${order.discount.toFixed(2)}`, startX + 400, currentY);
-    }
-    
-    currentY = doc.y;
-    doc.fontSize(14).text('Total:', startX + 300, currentY);
-    doc.text(`₹${order.totalAmount.toFixed(2)}`, startX + 400, currentY);
 
-    // Add payment details
+    currentY += 20;
+    doc.fontSize(14)
+        .fillColor(colors.primary)
+        .text('Total:', 310, currentY)
+        .text(`RS : ${order.totalAmount.toFixed(2)}`, 450, currentY);
+
+    // Payment details section
     doc.moveDown(2);
-    doc.fontSize(14).text('Payment Details', { underline: true });
-    doc.fontSize(12).text(`Payment Method: ${order.paymentMethod}`);
-    doc.text(`Payment Status: ${order.paymentStatus}`);
-    doc.text(`Order Status: ${order.status}`);
+    const paymentDetailsY = doc.y;
+    
+    // Create a styled box for payment details
+    doc.rect(50, paymentDetailsY, 495, 120)
+        .fillColor(colors.accent)
+        .fill();
 
-    // Add footer
-    doc.moveDown(2);
-    doc.fontSize(10).text('Thank you for shopping with Fabrico!', { align: 'center' });
-    doc.text('This is a computer-generated invoice and does not require a signature.', { align: 'center' });
+    // Payment Details Header
+    doc.fontSize(14)
+        .fillColor(colors.primary)
+        .text('Payment Details', 60, paymentDetailsY + 10);
 
-    // Finalize the PDF
+    // Payment information with better alignment
+    doc.fontSize(12)
+        .fillColor(colors.secondary);
+
+    const detailsStartX = 60;
+    const valueStartX = 200;
+    let detailsY = paymentDetailsY + 40;
+
+    // Helper function for aligned payment details
+    const addPaymentDetail = (label, value) => {
+        doc.text(label, detailsStartX, detailsY);
+        doc.text(value, valueStartX, detailsY);
+        detailsY += 20;
+    };
+
+    // Add payment details with consistent spacing
+    addPaymentDetail('Payment Method:', order.paymentMethod.toUpperCase());
+    addPaymentDetail('Payment Status:', order.paymentStatus.toUpperCase());
+    addPaymentDetail('Order Status:', order.status.toUpperCase());
+
+    // Footer with styled box
+    const footerY = doc.page.height - 100;
+    doc.rect(50, footerY, 495, 60)
+        .fillColor(colors.accent)
+        .fill();
+
+    doc.fillColor(colors.secondary)
+        .fontSize(10)
+        .text('Thank you for shopping with Fabrico!', 50, footerY + 15, { align: 'center' })
+        .text('This is a computer-generated invoice and does not require a signature.', 50, footerY + 35, { align: 'center' });
+
     doc.end();
 });
 
