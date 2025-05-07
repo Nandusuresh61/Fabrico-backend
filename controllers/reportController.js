@@ -153,70 +153,183 @@ export const downloadReport = asyncHandler(async (req, res) => {
     paymentMethods: { cod: 0, online: 0, wallet: 0 }
   });
 
-
   if (format === 'pdf') {
     const doc = new PDFDocument();
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename=sales-report.pdf');
     
     try {
-      // Header
-      doc.fontSize(20).text('Sales Report', { align: 'center' });
-      doc.moveDown();
-      doc.fontSize(12).text(`Period: ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`, { align: 'center' });
+      // Define colors and styling
+      const colors = {
+        primary: '#2563eb',
+        secondary: '#64748b',
+        accent: '#e2e8f0',
+        border: '#cbd5e1'
+      };
+      
+      // Define table layout coordinates with better spacing
+      const startX = 50;
+      const endX = 550;
+      const columnSpacing = 85;
+      
+      // Header with logo and title
+      doc.fontSize(24)
+         .fillColor(colors.primary)
+         .text('Sales Report', { align: 'center' });
+      doc.moveDown(0.5);
+      
+      // Date range with styled box
+      doc.rect(startX, doc.y, endX - startX, 30)
+         .fillColor(colors.accent)
+         .fill();
+      
+      doc.fillColor(colors.secondary)
+         .fontSize(12)
+         .text(
+           `Report Period: ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`,
+           startX + 10,
+           doc.y - 25,
+           { align: 'center' }
+         );
+      doc.moveDown(2);
+
+      // Summary Section with styled boxes
+      doc.fontSize(18)
+         .fillColor(colors.primary)
+         .text('Summary', { underline: false });
       doc.moveDown();
 
-      // Summary Section
-      doc.fontSize(16).text('Summary', { underline: true });
-      doc.moveDown();
-      doc.fontSize(12);
-      doc.text(`Total Orders: ${summary.totalOrders}`);
-      doc.text(`Total Sales: ₹${summary.totalSales.toFixed(2)}`);
-      doc.text(`Total Units Sold: ${summary.totalUnits}`);
-      doc.text(`Product Discount: ₹${summary.productDiscount.toFixed(2)}`);
-      doc.text(`Coupon Discount: ₹${summary.couponDiscount.toFixed(2)}`);
-      doc.text(`Net Sales: ₹${(summary.totalSales - summary.productDiscount - summary.couponDiscount).toFixed(2)}`);
+      // Create a grid of summary boxes
+      const boxWidth = 250;
+      const boxHeight = 60;
+      const boxSpacing = 20;
+      let currentX = startX;
+      let currentY = doc.y;
+
+      // Helper function for summary boxes
+      const drawSummaryBox = (title, value, x, y) => {
+        doc.rect(x, y, boxWidth, boxHeight)
+           .fillColor(colors.accent)
+           .fill()
+           .fillColor(colors.secondary)
+           .fontSize(12)
+           .text(title, x + 10, y + 10)
+           .fillColor(colors.primary)
+           .fontSize(16)
+           .text(value, x + 10, y + 30);
+      };
+
+      // Draw summary boxes in a grid
+      drawSummaryBox('Total Orders', summary.totalOrders.toString(), currentX, currentY);
+      drawSummaryBox('Total Sales', `RS : ${summary.totalSales.toFixed(2)}`, currentX + boxWidth + boxSpacing, currentY);
+      
+      currentY += boxHeight + boxSpacing;
+      drawSummaryBox('Total Units', summary.totalUnits.toString(), currentX, currentY);
+      drawSummaryBox('Net Sales', `RS : ${(summary.totalSales - summary.productDiscount - summary.couponDiscount).toFixed(2)}`, currentX + boxWidth + boxSpacing, currentY);
+
+      doc.moveDown(4);
+
+      // Payment Methods Section
+      doc.fontSize(18)
+         .fillColor(colors.primary)
+         .text('Payment Distribution');
       doc.moveDown();
 
-      // Payment Methods
-      doc.text('Payment Methods:');
-      Object.entries(summary.paymentMethods).forEach(([method, count]) => {
-        doc.text(`  ${method.toUpperCase()}: ${count}`);
+      // Draw payment method boxes
+      const methodWidth = (endX - startX - (boxSpacing * 2)) / 3;
+      currentY = doc.y;
+      
+      Object.entries(summary.paymentMethods).forEach(([method, count], index) => {
+        const x = startX + (methodWidth + boxSpacing) * index;
+        doc.rect(x, currentY, methodWidth, 50)
+           .fillColor(colors.accent)
+           .fill()
+           .fillColor(colors.secondary)
+           .fontSize(12)
+           .text(method.toUpperCase(), x + 10, currentY + 10)
+           .fillColor(colors.primary)
+           .fontSize(16)
+           .text(count.toString(), x + 10, currentY + 30);
       });
-      doc.moveDown();
+
+      doc.moveDown(4);
 
       // Orders Table
-      doc.fontSize(16).text('Order Details', { underline: true });
+      doc.fontSize(18)
+         .fillColor(colors.primary)
+         .text('Order Details');
       doc.moveDown();
-      doc.fontSize(12);
+
+      // Table headers with background
+      const headerY = doc.y;
+      doc.rect(startX, headerY, endX - startX, 25)
+         .fillColor(colors.accent)
+         .fill();
 
       // Table headers
-      let currentY = doc.y;
-      doc.text('Order ID', startX, currentY);
-      doc.text('Date', startX + 80, currentY);
-      doc.text('Customer', startX + 160, currentY);
-      doc.text('Items', startX + 240, currentY);
-      doc.text('Product Disc.', startX + 300, currentY);
-      doc.text('Coupon Disc.', startX + 380, currentY);
-      doc.text('Amount', startX + 460, currentY);
+      doc.fillColor(colors.secondary)
+         .fontSize(11);
+      
+      const headers = [
+        { text: 'Order ID', x: startX + 10 },
+        { text: 'Date', x: startX + columnSpacing },
+        { text: 'Customer', x: startX + columnSpacing * 2 },
+        { text: 'Items', x: startX + columnSpacing * 3, align: 'center', width: 50 },
+        { text: 'Product Disc.', x: startX + columnSpacing * 3.7, align: 'right', width: 80 },
+        { text: 'Coupon Disc.', x: startX + columnSpacing * 4.5, align: 'right', width: 80 },
+        { text: 'Amount', x: startX + columnSpacing * 5.3, align: 'right', width: 80 }
+      ];
+
+      headers.forEach(header => {
+        doc.text(
+          header.text,
+          header.x,
+          headerY + 7,
+          { width: header.width, align: header.align || 'left' }
+        );
+      });
+
       doc.moveDown();
 
-      // Table rows
-      orders.forEach(order => {
-        currentY = doc.y;
-        if (currentY > 700) {
+      // Table rows with alternating background
+      let rowY = doc.y;
+      orders.forEach((order, index) => {
+        if (rowY > 700) {
           doc.addPage();
-          currentY = doc.y;
+          rowY = 50;
         }
-        doc.text(order.orderId, startX, currentY);
-        doc.text(new Date(order.createdAt).toLocaleDateString(), startX + 80, currentY);
-        doc.text(order.user.username, startX + 160, currentY);
-        doc.text(order.items.length.toString(), startX + 240, currentY);
-        doc.text(`₹${(order.productDiscount || 0).toFixed(2)}`, startX + 300, currentY);
-        doc.text(`₹${(order.couponDiscount || 0).toFixed(2)}`, startX + 380, currentY);
-        doc.text(`₹${order.totalAmount.toFixed(2)}`, startX + 460, currentY);
-        doc.moveDown();
+
+        // Alternate row background
+        if (index % 2 === 0) {
+          doc.rect(startX, rowY, endX - startX, 20)
+             .fillColor('#f8fafc')
+             .fill();
+        }
+
+        doc.fillColor(colors.secondary)
+           .fontSize(10);
+
+        // Row data
+        doc.text(order.orderId, startX + 10, rowY + 5);
+        doc.text(new Date(order.createdAt).toLocaleDateString(), startX + columnSpacing, rowY + 5);
+        doc.text(order.user.username, startX + columnSpacing * 2, rowY + 5);
+        doc.text(order.items.length.toString(), startX + columnSpacing * 3, rowY + 5, { width: 50, align: 'center' });
+        doc.text(`RS : ${(order.productDiscount || 0).toFixed(2)}`, startX + columnSpacing * 3.7, rowY + 5, { width: 80, align: 'right' });
+        doc.text(`RS : ${(order.couponDiscount || 0).toFixed(2)}`, startX + columnSpacing * 4.5, rowY + 5, { width: 80, align: 'right' });
+        doc.text(`RS : ${order.totalAmount.toFixed(2)}`, startX + columnSpacing * 5.3, rowY + 5, { width: 80, align: 'right' });
+
+        rowY += 20;
       });
+
+      // Footer
+      doc.fontSize(8)
+         .fillColor(colors.secondary)
+         .text(
+           'Generated on ' + new Date().toLocaleString(),
+           startX,
+           doc.page.height - 50,
+           { align: 'center' }
+         );
 
       doc.pipe(res);
       doc.end();
@@ -249,11 +362,11 @@ export const downloadReport = asyncHandler(async (req, res) => {
 
     summarySheet.addRows([
       { metric: 'Total Orders', value: summary.totalOrders },
-      { metric: 'Total Sales', value: `₹${summary.totalSales.toFixed(2)}` },
+      { metric: 'Total Sales', value: `RS : ${summary.totalSales.toFixed(2)}` },
       { metric: 'Total Units Sold', value: summary.totalUnits },
-      { metric: 'Product Discount', value: `₹${summary.productDiscount.toFixed(2)}` },
-      { metric: 'Coupon Discount', value: `₹${summary.couponDiscount.toFixed(2)}` },
-      { metric: 'Net Sales', value: `₹${(summary.totalSales - summary.productDiscount - summary.couponDiscount).toFixed(2)}` },
+      { metric: 'Product Discount', value: `RS : ${summary.productDiscount.toFixed(2)}` },
+      { metric: 'Coupon Discount', value: `RS : ${summary.couponDiscount.toFixed(2)}` },
+      { metric: 'Net Sales', value: `RS : ${(summary.totalSales - summary.productDiscount - summary.couponDiscount).toFixed(2)}` },
       { metric: 'COD Orders', value: summary.paymentMethods.cod },
       { metric: 'Online Orders', value: summary.paymentMethods.online },
       { metric: 'Wallet Orders', value: summary.paymentMethods.wallet }
@@ -287,9 +400,9 @@ export const downloadReport = asyncHandler(async (req, res) => {
         date: new Date(order.createdAt).toLocaleDateString(),
         customer: order.user.username,
         items: order.items.length,
-        amount: `₹${order.totalAmount.toFixed(2)}`,
-        discount: `₹${order.productDiscount.toFixed(2)}`,
-        couponDiscount: `₹${(order.couponDiscount || 0).toFixed(2)}`,
+        amount: `RS : ${order.totalAmount.toFixed(2)}`,
+        discount: `RS : ${order.productDiscount.toFixed(2)}`,
+        couponDiscount: `RS : ${(order.couponDiscount || 0).toFixed(2)}`,
         paymentMethod: order.paymentMethod.toUpperCase()
       });
     });
