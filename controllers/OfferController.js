@@ -340,6 +340,9 @@ export const toggleOfferStatus = asyncHandler(async (req, res) => {
   }
 
   offer.isActive = !offer.isActive;
+  offer.isManuallyDeactivated = !offer.isActive;
+  await offer.save();
+
   await offer.save();
 
   if (offer.isActive) {

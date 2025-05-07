@@ -13,6 +13,7 @@ export const initCronJobs = () => {
 
       const offersToActivate = await Offer.find({
         isActive: false,
+        isManuallyDeactivated: { $ne: true },
         startDate: { $lte: now },
         endDate: { $gt: now }
       });
