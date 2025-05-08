@@ -7,7 +7,7 @@ import Wallet from '../models/walletModel.js';
 import Address from '../models/addressModel.js';
 import { HTTP_STATUS } from '../utils/httpStatus.js';
 import Product from '../models/productModel.js';
-import Variant from '../models/variantModel.js';
+import Variant from '../models/varientModel.js';
 
 
 const generateOrderId = async () => {
