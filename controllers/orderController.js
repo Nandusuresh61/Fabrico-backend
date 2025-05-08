@@ -6,6 +6,8 @@ import PDFDocument from 'pdfkit';
 import Wallet from '../models/walletModel.js';
 import Address from '../models/addressModel.js';
 import { HTTP_STATUS } from '../utils/httpStatus.js';
+import Product from '../models/productModel.js';
+import Variant from '../models/variantModel.js';
 
 
 const generateOrderId = async () => {
@@ -38,6 +40,26 @@ export const createOrder = asyncHandler(async (req, res) => {
         res.status(HTTP_STATUS.BAD_REQUEST);
         throw new Error('No order items');
     }
+    for (const item of items) {
+        const product = await Product.findById(item.product);
+        if (!product || product.status === 'blocked') {
+            res.status(HTTP_STATUS.BAD_REQUEST);
+            throw new Error('One or more products are unavailable');
+        }
+
+        const variant = await Variant.findById(item.variant);
+        if (!variant || variant.isBlocked) {
+            res.status(HTTP_STATUS.BAD_REQUEST);
+            throw new Error('One or more product variants are unavailable');
+        }
+
+        // Verify stock availability
+        if (variant.stock < item.quantity) {
+            res.status(HTTP_STATUS.BAD_REQUEST);
+            throw new Error(`Insufficient stock for product variant`);
+        }
+    }
+
 
     let addressDetails;
     
