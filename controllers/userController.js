@@ -151,13 +151,7 @@ const createUser = asyncHandler(async (req, res) => {
 
     res.status(HTTP_STATUS.OK).json({
         message: 'User registered successfully. Please verify your email.',
-        _id: newUser._id,
-        username: newUser.username,
-        email: newUser.email,
-        phone: newUser.phone,
-        isAdmin: newUser.isAdmin,
-        profileImage: newUser.profileImage,
-        referralCode: newUser.referralCode
+        email: newUser.email
     });
 });
 
