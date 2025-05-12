@@ -605,12 +605,23 @@ export const googleAuthController = asyncHandler(async (req, res) => {
             const randomPassword = Math.random().toString(36).substring(2, 15) +
                 Math.random().toString(36).substring(2, 15);
             
+            const userReferralCode = await generateReferralCode(name);
+            
             user = await User.create({
                 username: name,
                 email,
                 password: randomPassword,
-                isVerified: true // Since it's Google OAuth, we can trust the email is verified
+                isVerified: true, // Since it's Google OAuth, we can trust the email is verified
+                referralCode: userReferralCode
             });
+
+            // Create wallet for new user
+            const wallet = new Wallet({
+                userId: user._id,
+                balance: 0,
+                currency: 'INR'
+            });
+            await wallet.save();
         }
 
         if(user.status=='blocked') {
@@ -626,6 +637,10 @@ export const googleAuthController = asyncHandler(async (req, res) => {
             _id: user._id,
             username: user.username,
             email: user.email,
+            isAdmin: user.isAdmin,
+            profileImage: user.profileImage,
+            phone: user.phone,
+            referralCode: user.referralCode
         });
     } catch (error) {
         console.error('Google Auth Error:', error);
