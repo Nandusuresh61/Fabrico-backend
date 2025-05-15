@@ -50,6 +50,13 @@ const getCart = asyncHandler(async (req, res) => {
 const addToCart = asyncHandler(async (req, res) => {
     const { productId, variantId, quantity = 1 } = req.body;
 
+    // Validate quantity limit
+    if (quantity > 10) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Maximum quantity allowed per purchase is 10 units' 
+        });
+    }
+
     //checking if exists and is active
 
     const product = await Product.findById(productId)
@@ -176,6 +183,13 @@ const removeFromCart = asyncHandler(async (req, res) => {
 const updateCartQuantity = asyncHandler(async (req, res) => {
     const { itemId } = req.params;
     const { quantity } = req.body;
+
+    // Validate quantity limit
+    if (quantity > 10) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: 'Maximum quantity allowed per purchase is 10 units' 
+        });
+    }
 
     let cart = await Cart.findOne({ user: req.user._id });
 
