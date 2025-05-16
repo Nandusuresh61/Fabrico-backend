@@ -227,11 +227,11 @@ export const updateCoupon = asyncHandler(async (req, res) => {
         message: 'Invalid date format'
       });
     }
-    
-    // Set time to midnight in local timezone
-    processedStartDate.setHours(0, 0, 0, 0);
-    processedEndDate.setHours(0, 0, 0, 0);
 
+    // Match the offer controller's date handling pattern
+    processedStartDate.setHours(0, 0, 0, 0);
+    
+    // Don't use Date.UTC() as it causes timezone issues
     if (processedEndDate <= processedStartDate) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
         message: 'End date must be after start date' 
