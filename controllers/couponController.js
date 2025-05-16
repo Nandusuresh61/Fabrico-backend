@@ -218,7 +218,6 @@ export const updateCoupon = asyncHandler(async (req, res) => {
     });
   }
 
-  // Process dates if provided
   let processedStartDate = startDate ? new Date(startDate) : coupon.startDate;
   let processedEndDate = endDate ? new Date(endDate) : coupon.endDate;
 
@@ -228,18 +227,8 @@ export const updateCoupon = asyncHandler(async (req, res) => {
         message: 'Invalid date format'
       });
     }
-    processedStartDate = new Date(Date.UTC(
-      processedStartDate.getFullYear(),
-      processedStartDate.getMonth(),
-      processedStartDate.getDate()
-    ));
     
-    processedEndDate = new Date(Date.UTC(
-      processedEndDate.getFullYear(),
-      processedEndDate.getMonth(),
-      processedEndDate.getDate()
-    ));
-
+    // Set time to midnight in local timezone
     processedStartDate.setHours(0, 0, 0, 0);
     processedEndDate.setHours(0, 0, 0, 0);
 
