@@ -242,8 +242,8 @@ export const updateCoupon = asyncHandler(async (req, res) => {
       discountType: discountType || coupon.discountType,
       discountValue: discountValue || coupon.discountValue,
       minOrderAmount: minimumAmount || coupon.minOrderAmount,
-      startDate: start,
-      endDate: end,
+      startDate: startDate,
+      endDate: endDate,
       isExpired: false // Reset expired status on update
     },
     { new: true }
