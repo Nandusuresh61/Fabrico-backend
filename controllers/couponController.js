@@ -217,33 +217,20 @@ export const updateCoupon = asyncHandler(async (req, res) => {
       message: 'Fixed discount amount must be less than minimum order amount'
     });
   }
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const now = new Date();
 
-  let processedStartDate = startDate ? new Date(startDate) : coupon.startDate;
-  let processedEndDate = endDate ? new Date(endDate) : coupon.endDate;
+  start.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  if (start < now) {
+    res.status(HTTP_STATUS.BAD_REQUEST);
+    throw new Error("Coupon start date cannot be in the past");
+  }
 
-  if (startDate || endDate) {
-    if (isNaN(processedStartDate.getTime()) || isNaN(processedEndDate.getTime())) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        message: 'Invalid date format'
-      });
-    }
-
-    // Match the offer controller's date handling pattern
-    processedStartDate.setHours(0, 0, 0, 0);
-    
-    // Don't use Date.UTC() as it causes timezone issues
-    if (processedEndDate <= processedStartDate) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
-        message: 'End date must be after start date' 
-      });
-    }
-
-    const maxDuration = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
-    if (processedEndDate - processedStartDate > maxDuration) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        message: 'Coupon duration cannot exceed 1 year'
-      });
-    }
+  if (end < start) {
+    res.status(HTTP_STATUS.BAD_REQUEST);
+    throw new Error("Coupon end date cannot be before start date");
   }
 
   const updatedCoupon = await Coupon.findByIdAndUpdate(
@@ -255,8 +242,8 @@ export const updateCoupon = asyncHandler(async (req, res) => {
       discountType: discountType || coupon.discountType,
       discountValue: discountValue || coupon.discountValue,
       minOrderAmount: minimumAmount || coupon.minOrderAmount,
-      startDate: processedStartDate,
-      endDate: processedEndDate,
+      startDate: start,
+      endDate: end,
       isExpired: false // Reset expired status on update
     },
     { new: true }
