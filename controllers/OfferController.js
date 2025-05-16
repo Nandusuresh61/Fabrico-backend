@@ -62,6 +62,17 @@ export const resetVariantDiscounts = async (offer) => {
 };
 
 export const applyOfferDiscount = async (offer) => {
+  const now = new Date();
+  const start = new Date(offer.startDate);
+  
+  // Set hours to 0 for date comparison
+  now.setHours(0, 0, 0, 0);
+  start.setHours(0, 0, 0, 0);
+  
+  // If start date is in future, don't apply discount
+  if (start > now) {
+    return;
+  }
   if (offer.offerType === "product") {
     for (const productId of offer.items) {
       const variants = await Variant.find({ product: productId });
@@ -333,6 +344,7 @@ export const toggleOfferStatus = asyncHandler(async (req, res) => {
 
   // Check if offer is expired
   const now = new Date();
+  
   if (offer.endDate < now) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
       message: 'Cannot toggle status of expired offer'

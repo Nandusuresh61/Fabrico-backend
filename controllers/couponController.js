@@ -322,6 +322,7 @@ export const toggleCouponStatus = asyncHandler(async (req, res) => {
 export const getAvailableCoupons = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
 
   const coupons = await Coupon.find({
     isExpired: false,
