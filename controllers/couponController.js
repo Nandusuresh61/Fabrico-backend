@@ -74,14 +74,9 @@ export const createCoupon = asyncHandler(async (req, res) => {
   const end = new Date(endDate);
   const now = new Date();
 
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-    return res.status(HTTP_STATUS.BAD_REQUEST).json({
-      message: 'Invalid date format'
-    });
-  }
-
-  start.setHours(0, 0, 0, 0);
-  now.setHours(0, 0, 0, 0);
+  // Set all dates to UTC midnight for consistent comparison
+  start.setUTCHours(0, 0, 0, 0);
+  now.setUTCHours(0, 0, 0, 0);
 
   if (start < now) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
