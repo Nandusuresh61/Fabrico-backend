@@ -222,7 +222,7 @@ export const updateCoupon = asyncHandler(async (req, res) => {
   const now = new Date();
 
   start.setUTCHours(0, 0, 0, 0);
-  now.setUTCHours(0, 0, 0, 0);
+  now.setUTCHours(-5, -30, 0, 0);
   if (start < now) {
     res.status(HTTP_STATUS.BAD_REQUEST);
     throw new Error("Coupon start date cannot be in the past");
