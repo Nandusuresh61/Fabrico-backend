@@ -304,13 +304,13 @@ export const toggleCouponStatus = asyncHandler(async (req, res) => {
 
   // Check if coupon is expired
   const now = new Date();
-  if (coupon.endDate < now || coupon.isExpired) {
+  if (coupon.endDate < now ) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
       message: 'Cannot toggle status of expired coupon'
     });
   }
 
-  coupon.isActive = !coupon.isActive;
+  coupon.isExpired = !coupon.isExpired;
   await coupon.save();
 
   res.status(HTTP_STATUS.OK).json({
