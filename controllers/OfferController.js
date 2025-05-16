@@ -266,8 +266,8 @@ export const updateOffer = asyncHandler(async (req, res) => {
   const end = new Date(endDate);
   const now = new Date();
 
-  start.setUTCHours(0, 0, 0, 0);
-  now.setUTCHours(0, 0, 0, 0);
+  start.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
   
   if (start < now) {
     res.status(HTTP_STATUS.BAD_REQUEST);
