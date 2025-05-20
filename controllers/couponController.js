@@ -3,10 +3,10 @@ import Coupon from '../models/couponModel.js';
 import { HTTP_STATUS } from '../utils/httpStatus.js';
 
 export const createCoupon = asyncHandler(async (req, res) => {
-  const { code, description, discountType, discountValue, minimumAmount, startDate, endDate } = req.body;
+  const { code, description, discountType, discountValue, minimumAmount, maximumAmount, startDate, endDate } = req.body;
 
   // Basic field validation
-  if (!code || !description || !discountType || !discountValue || !minimumAmount || !startDate || !endDate) {
+  if (!code || !description || !discountType || !discountValue || !minimumAmount || !maximumAmount || !startDate || !endDate) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
       message: 'All fields are required' 
     });
@@ -64,6 +64,12 @@ export const createCoupon = asyncHandler(async (req, res) => {
     });
   }
 
+  if(maximumAmount <= minimumAmount){
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Maximum amount must be greater than minimum amount'
+    });
+  }
+
   if (discountType === 'fixed' && discountValue >= minimumAmount) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
       message: 'Fixed discount amount must be less than minimum order amount'
@@ -104,6 +110,7 @@ export const createCoupon = asyncHandler(async (req, res) => {
     discountType,
     discountValue,
     minOrderAmount: minimumAmount,
+    maxOrderAmount: maximumAmount,
     startDate: start,
     endDate: end
   });
@@ -170,7 +177,7 @@ export const getAllCoupons = asyncHandler(async (req, res) => {
 });
 
 export const updateCoupon = asyncHandler(async (req, res) => {
-  const { code, description, discountType, discountValue, minimumAmount, startDate, endDate } = req.body;
+  const { code, description, discountType, discountValue, minimumAmount, maximumAmount, startDate, endDate } = req.body;
   const couponId = req.params.id;
 
   const coupon = await Coupon.findById(couponId);
@@ -207,6 +214,12 @@ export const updateCoupon = asyncHandler(async (req, res) => {
     });
   }
 
+  if (maximumAmount && maximumAmount <= minimumAmount) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Maximum amount must be greater than minimum amount'
+    });
+  }
+
   if (discountType === 'fixed' && minimumAmount && discountValue >= minimumAmount) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
       message: 'Fixed discount amount must be less than minimum order amount'
@@ -237,6 +250,7 @@ export const updateCoupon = asyncHandler(async (req, res) => {
       discountType: discountType || coupon.discountType,
       discountValue: discountValue || coupon.discountValue,
       minOrderAmount: minimumAmount || coupon.minOrderAmount,
+      maxOrderAmount: maximumAmount || coupon.maxOrderAmount,
       startDate: startDate,
       endDate: endDate,
       isExpired: false // Reset expired status on update
@@ -293,7 +307,7 @@ export const toggleCouponStatus = asyncHandler(async (req, res) => {
 export const getAvailableCoupons = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const now = new Date();
-  now.setHours(0, 0, 0, 0);
+
 
   const coupons = await Coupon.find({
     isExpired: false,
@@ -334,9 +348,9 @@ export const validateCoupon = asyncHandler(async (req, res) => {
     });
   }
 
-  if (totalAmount < coupon.minOrderAmount) {
+  if (totalAmount < coupon.minOrderAmount || totalAmount > coupon.maxOrderAmount) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({
-      message: `Minimum order amount of ₹${coupon.minOrderAmount} required for this coupon`
+      message: `Order amount must be between ₹${coupon.minOrderAmount} and ₹${coupon.maxOrderAmount} for this coupon`
     });
   }
 

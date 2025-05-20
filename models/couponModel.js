@@ -36,6 +36,10 @@ const couponSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    maxOrderAmount: {
+      type: Number,
+      required: true,
+    },
     usedBy: [
       {
         type: mongoose.Schema.Types.ObjectId,
